@@ -33,9 +33,11 @@ Please follow the github repos [C-FLEX2D](https://github.com/symphonylyh/C-FLEX2
 [Anaconda](https://www.anaconda.com) is recommended to provide the environment of the Python code.
 
 Create virtual environment:
+
 `conda create --name fem`
 
 Activate virtual env any time when you run the code:
+
 `conda activate fem`
 
 ### Details
