@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import subprocess
 import platform
 from pathlib import Path
 import vtk
@@ -232,8 +233,7 @@ class Superposition():
         self.outputFileList = []
         for i, file in enumerate(self.inputFileList):
             print("> Running C-FLEX2D for Tire {}".format(i))
-
-            os.system("../bin/{}/main2d {}".format(system, file))
+            subprocess.call(["../bin/{}/main2d".format(system), file])
             filename = Path(file).stem
             self.outputFileList.append('./results/' + filename + ".vtk")
 

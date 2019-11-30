@@ -19,7 +19,6 @@ Problem so far:
 # Import Required Functions
 import numpy as np
 import os
-import shutil
 
 class MeshGenerator2d:
     '''
@@ -35,8 +34,8 @@ class MeshGenerator2d:
         return self.radius
 
     def clear_inputs(self):
-        shutil.rmtree('./results/', ignore_errors=True)
-        os.makedirs('results/')
+        for f in os.listdir('./results/'):
+            os.unlink(os.path.join('./results', f))
 
     def generate_mesh(self, force, area, num, x_len = -1, y_len=-1):
         radius = np.sqrt(area/np.pi)
