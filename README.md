@@ -27,7 +27,7 @@ This software is mainly written in Python. Modules include:
 ## Installation Guide
 
 ### Prerequisites
-Please follow the github repos [C-FLEX2D](https://github.com/symphonylyh/C-FLEX2D) and [FLEX3D]((https://github.com/symphonylyh/FLEX3D)) to compile the programs and put them under `/bin/` folder. Executables on Windows platform are given here as examples.
+Please follow the github repos [C-FLEX2D](https://github.com/symphonylyh/C-FLEX2D) and [FLEX3D]((https://github.com/symphonylyh/FLEX3D)) to compile the programs and put them under `/bin/` folder. Executables on Windows and MacOS platforms are given here as examples.
 
 ### Environment
 [Anaconda](https://www.anaconda.com) is recommended to provide the environment of the Python code.
