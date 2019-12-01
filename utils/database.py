@@ -99,11 +99,29 @@ class Database():
                 result[i] = info # overwrite
         return result
 
+    def query_evaluation(self, vehicle):
+        """Query evaluation points of the vehicle.
+        Args:
+            vehicle [str]: name of the query vehicle.
+        Returns:
+            [list<dict>]: vehicle info [ {Tire1}, {Tire2}, {Tire3}, ...]
+        """
+        with self.connection.cursor() as cursor:
+            q = "select * from evaluationpoints where vehicleid = (select vehicleid from vehicles where name = '{}');"
+            cursor.execute(q.format(vehicle))
+            result = cursor.fetchall() # a list of dictionary (each element is a row)
+            if (len(result) == 0):
+                print("Vehicle {} not found!".format(vehicle))
+        return result
+
     def close(self):
         self.connection.close()
         print("> Database '{}' gracefully closed".format(self.name))
 
 if __name__ == "__main__":
+    import numpy as np
+    from plot import plot_tire_eval
+
     # === Connect === #
     db = Database(name='erdc')
 
@@ -117,14 +135,48 @@ if __name__ == "__main__":
     # === Query one vehicle (by name or by ID) === #
     vehicle = 'Boeing 777-300'
     # vehicle = 124
+    num_tires = 6 # see config.py
 
+    # ID to name
+    if isinstance(vehicle, int):
+        vehicle = vehicle_list[vehicle-1]
+
+    # Tire configuration
+    print("> Gear configuration of vehicle {}:".format(vehicle))
     fields = ['PercentOfLoad','xCoordinate','yCoordinate','Pressure','ContactArea']
-    results = db.query(fields=fields, vehicle=vehicle)
+    tires = db.query(fields=fields, vehicle=vehicle)
 
-    print("> Query results for vehicle {}:".format(vehicle if not isinstance(vehicle,int) else vehicle_list[vehicle-1]))
     print("{:10}".format("Tire"), *["{:15}".format(f) for f in fields])
-    for i, r in enumerate(results):
+    for i, r in enumerate(tires):
         print("{:10}".format(str(i)), *["{:15}".format(str(r[f])) for f in fields])
+    print("")
+
+    # Evaluation points
+    print("> Evaluation points of vehicle {}:".format(vehicle))
+    evals = db.query_evaluation(vehicle=vehicle)
+    pts = np.zeros((len(evals), 2))
+    print("{:8} {:8} {:8} {:8}".format("Point", "X", "Y", "Z"))
+    for i, r in enumerate(evals):
+        pts[i] = [r['xCoordinate'], r['yCoordinate']]
+        print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, r['xCoordinate'], r['yCoordinate'], r['zCoordinate']))
+
+    # Truncate
+    xy = np.zeros((len(tires), 2))
+    force, area = np.zeros(len(tires)), np.zeros(len(tires))
+    for i, tire in enumerate(tires):
+        _, X, Y, F, A = [tire[f] for f in fields]
+        xy[i] = [X, Y]
+        force[i], area[i] = F, A
+    radius = np.sqrt(area / np.pi)
+
+    if num_tires != -1:
+        xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
+    else:
+        num_tires = len(tires) # update num_tires
+
+    # Plot
+    plot_tire_eval(xy, radius, pts, vehicle=vehicle) # just plot
+    # plot_tire_eval(xy, radius, pts, vehicle=vehicle, path='./test.png') # save figure
 
     # === Close === #
     db.close()

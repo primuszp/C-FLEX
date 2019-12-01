@@ -14,6 +14,7 @@ from shape import ShapeQ8
 from utils.database import Database
 from mesh_generator.m2d import MeshGenerator2d
 from utils.vtk import readVTK, getCellLocator
+from utils.plot import plot_tire_eval, plot_eval_depth
 from config import Config as cfg
 
 import warnings
@@ -22,14 +23,19 @@ warnings.filterwarnings("ignore")
 class Superposition():
     """Superposition module.
     Attrs:
-        database [Database]: connnected MySQL database
-        fields [list<str>]: vehicle information in the database
-        tireCoordinates [list<x,y>]: 2D coordinates of each tire
+        database [Database]: connnected MySQL database obj
+        vehicle_fields [list<str>]: useful vehicle information in the database
+        tireCoordinates [n x 2]: 2D (x,y) coordinates of each tire
+        tireForces [n x 1]: pressure of each tire
+        tireAreas [n x 1]: area of each tire
+        evalPoints [n x 2]: 2D (x,y) coordinates of evaluation points in the database
+        depths [n x 1]: depths of the mesh (negative values!)
         queryMesh [VTK grid]: VTK mesh for final superposition results
-        queryPoints [list<x,y,z>]: 3D coordinates of each evaluation points
+        queryPoints [n x 3]: 3D (x,y,z) coordinates of each evaluation points
         inputFileList [list<str>]: input filenames (one for each tire)
         outputFileList [list<str>]: output filenames (one for each tire)
         elementTypeMap [dict]: VTK element table
+        results [n x 6]: superposition results at every grid points
     """
 
     def __init__(self, database):
@@ -38,6 +44,8 @@ class Superposition():
         self.tireCoordinates = None
         self.tireForces = None
         self.tireAreas = None
+        self.evalPoints = None
+        self.depths = None
         self.queryMesh = None
         self.queryPoints = None
 
@@ -58,12 +66,14 @@ class Superposition():
             vehicle [str/int]: vehicle name or ID.
             num_tires [int]: No. of tires to be analyzed (-1 for full gear analysis).
         """
-        # === 1. Get vehicle's tire configuration from database === #
+        # === 1. Get vehicle's tire configuration and evaluation points from database === #
         vehicle_name = vehicle if isinstance(vehicle, str) else self.database.vehicle_all()[vehicle-1]
 
         tires = self.database.query(fields=self.vehicle_fields, vehicle=vehicle)
 
-        print("> === Analyzing {} of {} tires of vechicle {} ===".format(num_tires, len(tires), vehicle))
+        evals = self.database.query_evaluation(vehicle=vehicle)
+
+        print("> === Analyzing {} of {} tires of vechicle {}, {} evaluation points ===".format(num_tires, len(tires), vehicle, len(evals)))
 
         # get full gear configuration
         xy = np.zeros((len(tires), 2))
@@ -76,17 +86,30 @@ class Superposition():
 
         # truncate to a subset of tires when num_tires != -1
         if num_tires != -1:
-            xy, force, area = xy[:num_tires,:], force[:num_tires], area[:num_tires]
+            xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
         else:
             num_tires = len(tires) # update num_tires
+
+        # get evaluation points
+        pts = np.zeros((len(evals), 2))
+        for i, r in enumerate(evals):
+            pts[i] = [r['xCoordinate'], r['yCoordinate']]
 
         self.tireCoordinates = xy
         self.tireForces = force
         self.tireAreas = area
+        self.evalPoints = pts
 
+        # print tire config
+        print("> Tire Configuration:")
         print("{:8} {:8} {:8} {:8} {:8} {:8}".format("Tire", "X", "Y", "P(psi)", "A(in^2)", "R(in.)"))
         for i in range(num_tires):
             print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, xy[i,0], xy[i,1], force[i], area[i], radius[i]))
+        # print eval points
+        print("> Evaluation Points:")
+        print("{:8} {:8} {:8} {:8}".format("Point", "X", "Y", "Z"))
+        for i, r in enumerate(evals):
+            print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, r['xCoordinate'], r['yCoordinate'], r['zCoordinate']))
 
         # === 2. Generate query mesh and FEM meshes === #
         # one tire <--mesh generator 2d--> one input file <--FEM2D--> one output file
@@ -125,6 +148,10 @@ class Superposition():
 
         # 2.2 generate FEM meshes
         self.input_generator(mesh_len, force, area, layers)
+
+        # plot tire configuration and evaluation points (input_generator will clean the folder)
+        plot_tire_eval(xy, radius, pts, vehicle=vehicle, path='./results/config.png')
+        print("> [Plot] Tire configuration and evaluation points has been plotted in config.png")
 
         # === 3. Run FEM === #
         self.run_fem()
@@ -182,6 +209,7 @@ class Superposition():
             *tire [n x 1 vec]: unique tire coordinates in x & y directions
             rtire [num]: tire radius to be densified
         Note:
+            query mesh will include the grid points & evaluation points at all depth
             In VTK there are 3 types of "structured" grids:
             - vtkImageData (vtkUniformGrid): constant spacing & axis aligned
             - vtkRectilinearGrid: axis aligned & vary spacing
@@ -196,6 +224,8 @@ class Superposition():
         ycoords = self._nonlinear_spacing(ylim, yranges, spacing_dense, spacing_sparse)
         zcoords = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.SUPER_DEPTH_POINTS, base=10) - 1) # logspace
         # zcoords = np.linspace(*zlim, num=cfg.SUPER_DEPTH_POINTS) # linspace
+        self.depths = zcoords
+
 
         grid = vtk.vtkRectilinearGrid()
         grid.SetDimensions(len(xcoords), len(ycoords), len(zcoords)) # initialize mesh space
@@ -206,7 +236,15 @@ class Superposition():
 
         coord = vtk.vtkPoints()
         grid.GetPoints(coord)
-        self.queryPoints = vtk_to_numpy(coord.GetData())
+
+        # concat the evaluation points at all depths with queryPoints
+        evalPoints = np.zeros((len(self.evalPoints), len(self.depths), 3)) # P X D X 3
+        zcoords = zcoords.reshape(-1, 1) # D x 1
+        for i in range(len(self.evalPoints)):
+            t = np.tile(self.evalPoints[i], (len(self.depths), 1))
+            evalPoints[i] = np.concatenate((t, zcoords), axis=1)
+
+        self.queryPoints = np.concatenate((evalPoints.reshape(-1, 3), vtk_to_numpy(coord.GetData())), axis=0) # N x 3
         self.queryMesh = grid
 
     def input_generator(self, length, force, area, layers):
@@ -241,6 +279,8 @@ class Superposition():
         """Superpose results from multiple output files.
         Returns:
             [N x F mat]: superposition results. N = No. of query points, F = No. of field properties.
+        Note:
+            self.queryPoints is a concatenation of [evaluation points, query mesh points]. Superposition is done for both together, but we should separate them at the end.
         """
         print("> Superposition of {} tires".format(len(self.tireCoordinates)))
         superposition = np.zeros((len(self.queryPoints), len(self.fem_fields_3d)))
@@ -312,11 +352,20 @@ class Superposition():
                 # accumulate results
                 superposition[idx,:] += np.array([disp_X, disp_Y, disp_Z, stress_X, stress_Y, stress_Z])
 
-        # write to VTK query mesh
-        self.results = superposition # cache for validate.py
-        self.write_VTK(superposition)
+        # separate evaluation points from query mesh points
+        evals, superposition = np.split(superposition, [len(self.evalPoints) * cfg.SUPER_DEPTH_POINTS])
+        evals = evals.reshape(len(self.evalPoints), cfg.SUPER_DEPTH_POINTS, 6) # P x D x 6
+        # plot
+        plot_eval_depth(evals, self.depths, './results/')
+        print("> [Plot] Response at evaluation points has been plotted in eval_x.png")
+        # save to disk
+        np.save('./results/evaluations.npy', evals)
 
-    def write_VTK(self, results):
+        # write query mesh points result to VTK
+        self.results = superposition # cache for validate.py
+        self.writeVTK(superposition)
+
+    def writeVTK(self, results):
         """Write superposition result to the query mesh
         """
         print("> Write superposition results to VTK")
