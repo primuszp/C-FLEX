@@ -20,6 +20,8 @@ Problem so far:
 import numpy as np
 import os
 
+from config import Config as cfg
+
 class MeshGenerator2d:
     '''
         Generate mesh
@@ -34,10 +36,10 @@ class MeshGenerator2d:
         return self.radius
 
     def clear_inputs(self):
-        for f in os.listdir('./results/'):
-            os.unlink(os.path.join('./results', f))
+        for f in os.listdir(cfg.PATH_2D):
+            os.unlink(os.path.join(cfg.PATH_2D, f))
 
-    def generate_mesh(self, force, area, num, x_len = -1, y_len=-1):
+    def generate_mesh(self, x_len, y_len, force, area, num, name):
         radius = np.sqrt(area/np.pi)
         num_layer = 1
         layer_thickness = np.array([y_len])
@@ -108,8 +110,6 @@ class MeshGenerator2d:
             All the rest values should not be modified!
         '''
 
-        # name = str(x_coor) + '_' + str(y_coor) + "_input.txt"
-        name = "results/input_" + str(num) + ".txt"
         if (Test_method == 'Test'):
             full_surface_load = 1
         # ========================================================================================#

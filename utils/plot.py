@@ -5,7 +5,7 @@ Copyright (c) 2019 Haohang Huang
 Licensed under the GPL License (see LICENSE for details)
 Written by Haohang Huang, November 2019.
 """
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -62,20 +62,14 @@ def plot_tire_eval(xy, radius, pts, vehicle=None, path=None):
     else:
         plt.show()
 
-def plot_eval_depth(evals, depths, path=None):
+def plot_eval_depth(evals, depths, path=None, suffix=None):
     """Plot results at evaluation points along depth.
     Args:
         evals [P x D x 6]: superposition results at evaluation points. P is No. of points, D is No. of depth, 6 is result fields ['Displacement_X', 'Displacement_Y', 'Displacement_Z', 'Normal_X', 'Normal_Y', 'Normal_Z'].
         depths [D x 1]: depth values (negative!)
         path [str]: path for saving figure. None if plot only.
+        suffix [str]: suffix of file name.
     """
-    # legend
-    custom_legend = [
-        plt.Line2D([],[], marker='o', color='red', linestyle='None'),
-        plt.Line2D([],[], marker='o', color='blue', linestyle='None'),
-        plt.Line2D([],[], marker='o', color='black', linestyle='None')
-    ]
-
     for i in range(len(evals)):
         fig = plt.figure()
         ax = fig.subplots(ncols=2) # y is depth
@@ -95,18 +89,61 @@ def plot_eval_depth(evals, depths, path=None):
             ax[j].grid(which='minor', linestyle='--')
             ax[j].set_ylabel('Depth (in.)')
             ax[j].tick_params(labelsize='small')
+
+        plt.tight_layout()
+
+        if path != None:
+            plt.savefig(os.path.join(path, 'eval_' + str(i) + suffix + '.png'), dpi=300, bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+def plot_eval_depth_all(evals_lea, depths_lea, evals_2d, depths_2d, evals_3d, depths_3d, path=None):
+    """Plot results at evaluation points along depth.
+    Args:
+        evals_* [P x D x 6]: superposition results at evaluation points. P is No. of points, D is No. of depth, 6 is result fields ['Displacement_X', 'Displacement_Y', 'Displacement_Z', 'Normal_X', 'Normal_Y', 'Normal_Z'].
+        depths_* [D x 1]: depth values (negative!)
+        path [str]: path for saving figure. None if plot only.
+    """
+    # legend
+    custom_legend = [
+        plt.Line2D([],[], marker='o', color='red', linestyle='None'),
+        plt.Line2D([],[], marker='o', color='blue', linestyle='None'),
+        plt.Line2D([],[], marker='o', color='black', linestyle='None')
+    ]
+
+    for i in range(len(evals_2d)):
+        fig = plt.figure()
+        ax = fig.subplots(ncols=2) # y is depth
+        plt.suptitle('Responses at Evaluation Point {}'.format(i), y=0.01)
+
+        ax[0].set_xlabel('Vertical Displacement (in.)')
+        ax[1].set_xlabel('Vertical Stress (psi)')
+
+        data = evals_lea[i] # D x 6
+        ax[0].plot(data[:,2], depths_lea, marker='o', color='red', markersize=2)
+        ax[1].plot(data[:,5], depths_lea, marker='o', color='red',  markersize=2)
+        data = evals_2d[i] # D x 6
+        ax[0].plot(data[:,2], depths_2d, marker='o', color='blue', markersize=2)
+        ax[1].plot(data[:,5], depths_2d, marker='o', color='blue', markersize=2)
+        data = evals_3d[i] # D x 6
+        ax[0].plot(data[:,2], depths_3d, marker='o', color='black', markersize=2)
+        ax[1].plot(data[:,5], depths_3d, marker='o', color='black', markersize=2)
+
+        for j in range(2): # two subplots
+            ax[j].xaxis.set_ticks_position('top')
+            ax[j].xaxis.set_label_position('top')
+            ax[j].minorticks_on()
+            ax[j].grid(which='major', linestyle='-', color='gray')
+            ax[j].grid(which='minor', linestyle='--')
+            ax[j].set_ylabel('Depth (in.)')
+            ax[j].tick_params(labelsize='small')
             ax[j].legend(custom_legend, ['WinJULEA', '2D Superposition', '3D'], loc='lower right', fontsize='small', framealpha=0.5)
 
         plt.tight_layout()
 
         if path != None:
-            plt.savefig(path+'eval_{}.png'.format(i), dpi=300, bbox_inches='tight')
+            plt.savefig(os.path.join(path, 'eval_{}.png'.format(i)), dpi=300, bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
-
-if __name__ == '__main__':
-    import random
-    evals = np.random.rand(1, 10, 6)
-    depths = np.linspace(0,-10, num=10)
-    plot_eval_depth(evals, depths)
