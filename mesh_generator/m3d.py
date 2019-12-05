@@ -36,7 +36,7 @@ class MeshGenerator3d:
         # Layer information
         self.E = []
         self.layer_thickness = h[0] - h[-1]
-        B_F = (0,0) # Usually can be (0, -0.0807)
+        B_F = (0,0,-0.0607) # Usually can be (0,0,-0.0807)
         self.E.append([300000.0, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
 
         self.analysis = []
@@ -314,18 +314,18 @@ class MeshGenerator3d:
         # Output essential keys
         # (number of nodes, number of layers, number of x-direction point load, y-direction point load...
         #  edge load, x_prescribed disp., y_prescribed disp.)
-        f.write("%d %d %d %d %d %d %d %d %d\r\n" %\
+        f.write("%d %d %d %d %d %d %d %d %d\n" %\
                 (num_node, num_elem, num_layer, 0, 0, len(self.applied_forces), len(self.x_fixed), len(self.y_fixed), len(self.h_fixed)))
 
         # Output layer information
         for i in range(num_layer):
             #f.write("%d %d %d %d %d"%(elem_num[i], elem_num[i+1]-1, analysis[i][0], analysis[i][1], analysis[i][2]))
             f.write("%d %d %d %d %d"%(0, num_elem - 1, self.analysis[i][0], self.analysis[i][1], self.analysis[i][2]))
-            f.write("\r\n")
+            f.write("\n")
             for j in range(len(self.E[i])):
                 f.write("%f"%(self.E[i][j]))
                 f.write("%s"%" ")
-            f.write("\r\n")
+            f.write("\n")
         '''
         # Output model information
         f.write("%d\r\n"%(model_num))
@@ -343,12 +343,12 @@ class MeshGenerator3d:
         '''
         # Output x-direction edge load
         for l in self.applied_forces:
-            f.write("%d %d\r\n"%(l[0], l[2]))
-            f.write("%.4f %.4f %.4f\r\n"%(0,0,-l[1]))
+            f.write("%d %d\n"%(l[0], l[2]))
+            f.write("%.4f %.4f %.4f\n"%(0,0,-l[1]))
 
         # Output node information
         for i in range(num_node):
-            f.write("%.4f %.4f %.4f\r\n" %(self.true_pts[i][0], self.true_pts[i][1], self.true_pts[i][2]))
+            f.write("%.4f %.4f %.4f\n" %(self.true_pts[i][0], self.true_pts[i][1], self.true_pts[i][2]))
 
         for l in self.cell_pt_list:
             print(20, end=' ', file=f)
@@ -365,27 +365,27 @@ class MeshGenerator3d:
         for i in self.x_fixed:
             f.write("%d "%i)
         if (len(self.x_fixed)!=0):
-            f.write("\r\n")
+            f.write("\n")
         for i in self.x_fixed:
             f.write("%.5f "%0)
         if (len(self.x_fixed)!=0):
-            f.write("\r\n")
+            f.write("\n")
 
         # Output y-direction prescribed disp.
         for i in self.y_fixed:
             f.write("%d "%i)
         if (len(self.y_fixed)!=0):
-            f.write("\r\n")
+            f.write("\n")
         for i in self.y_fixed:
             f.write("%.5f "%0)
         if (len(self.x_fixed)!=0):
-            f.write("\r\n")
+            f.write("\n")
 
         # Output h-direction prescribed disp.
         for i in self.h_fixed:
             f.write("%d "%i)
         if (len(self.h_fixed)!=0):
-            f.write("\r\n")
+            f.write("\n")
         for i in self.h_fixed:
             f.write("%.5f "%0)
         f.close()

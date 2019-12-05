@@ -187,8 +187,8 @@ class FEM3D():
         xcoords = vtk_to_numpy(self.queryMesh.GetXCoordinates())
         ycoords = vtk_to_numpy(self.queryMesh.GetYCoordinates())
         zcoords = vtk_to_numpy(self.queryMesh.GetZCoordinates())
-        mesh_generator = MeshGenerator3d(xcoords, ycoords, zcoords)
-        mesh_generator.run(self.inputFile, self.tireCoordinates, self.tireForces, self.tireAreas)
+        # mesh_generator = MeshGenerator3d(xcoords, ycoords, zcoords)
+        # mesh_generator.run(self.inputFile, self.tireCoordinates, self.tireForces, self.tireAreas)
 
     def _nonlinear_spacing(self, space, tire_range, spacing_dense, spacing_sparse):
         """Generate nonlinear spacing (densified around tire location) in 1D coordinates. This function will detect overlapping ranges and merge them into a larger dense region.
@@ -259,7 +259,7 @@ class FEM3D():
         # 2. Generate VTK rectilinear grid
         grid = vtk.vtkRectilinearGrid()
         grid.SetDimensions(len(xcoords), len(ycoords), len(zcoords)) # initialize mesh space
-        print("> Query mesh generated with {} superposition points".format(grid.GetNumberOfPoints()))
+        print("> Generating 3D mesh with {} rectilinear points".format(grid.GetNumberOfPoints()))
         grid.SetXCoordinates(numpy_to_vtk(xcoords))
         grid.SetYCoordinates(numpy_to_vtk(ycoords))
         grid.SetZCoordinates(numpy_to_vtk(zcoords))

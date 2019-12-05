@@ -20,8 +20,6 @@ Problem so far:
 import numpy as np
 import os
 
-from config import Config as cfg
-
 class MeshGenerator2d:
     '''
         Generate mesh
@@ -35,21 +33,21 @@ class MeshGenerator2d:
     def get_radius(self):
         return self.radius
 
-    def clear_inputs(self):
-        for f in os.listdir(cfg.PATH_2D):
-            os.unlink(os.path.join(cfg.PATH_2D, f))
-
     def generate_mesh(self, x_len, y_len, force, area, num, name):
+        # @finding: if right boundary is free, depth=140R, radial=21R can match single tire case; if right boundary is x-fix, depth=500R, radial=500R can match
         radius = np.sqrt(area/np.pi)
-        num_layer = 1
-        layer_thickness = np.array([y_len])
+        num_layer = 3
+        layer_thickness = np.array([3, 12, 825])
+        layer_thickness = np.array([3, 12, 1725]) # match
+        layer_thickness = np.array([3, 12, 140*radius-15])
+        layer_depths = np.array([0, -3, -15])
         # layer_thickness = np.array([4, 4, 6, 4, 222])
         # layer_thickness = np.array([150 * 1 / 25.4])
         # ========================================================================================#
 
-        model_num = 2
-        model_para = [2212.5, 0.6577, -0.0657]
-        iter_para = [0, 0, 0.3, 0.3] # 5: gravity incremental #; loading incremental #; damping ratio for each increment
+        # model_num = 2
+        # model_para = [2212.5, 0.6577, -0.0657]
+        # iter_para = [0, 0, 0.3, 0.3] # 5: gravity incremental #; loading incremental #; damping ratio for each increment
 
         # Apply the properties for each layer
         E = []
@@ -60,11 +58,11 @@ class MeshGenerator2d:
                 @ E(list): A list of all the layers and the properties of dimension (num_layer)
                 @ B_F(tuple): A tuple for the body force. B_F[0]->direction, 0->down; B_F[1]->amplitude
         '''
-        B_F = (0,0) # Usually can be (0, -0.0807)
-        E.append([300000.0, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        #E.append([45000.0, 0.30, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        #E.append([7500.0, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        #E.append([6750,45000,0.15,0.45,15734,0, -0.0856, 6.5*10**(-6), 0])
+        # B_F = (0,-0.0807) # Usually can be (0, -0.0807)
+        B_F = (0, 0)
+        E.append([400101.103, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
+        E.append([30008.308, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
+        E.append([6004.562, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
         #E.append([7500.0, 0.4, B_F[0], B_F[1], 6.5*10**(-6), 0])# Do not modify two B_F terms
         # E.append([20000.0, 0.2, B_F[0], -0.0856, 6.5*10**(-6), 0])
         # E.append([6750,45000,0.15,0.45,15734,0, -0.0856, 6.5*10**(-6), 0])
@@ -80,8 +78,8 @@ class MeshGenerator2d:
                 @ analysis(list): A list of all the analysis requirement of dimension (num_layer)
         '''
         analysis.append([0, 0, 0])# analysis[0]->anisotropic; analysis[1]->nonlinear; analysis[2]->no-tension; analysis[3]->viscoelastic or not
-        #analysis.append([0, 0, 0])# 0->Needed; 1->Do not need
-        #analysis.append([0, 0, 0])
+        analysis.append([0, 0, 0])# 0->Needed; 1->Do not need
+        analysis.append([0, 0, 0])
         # analysis.append([0, 0, 0])
         # analysis.append([0, 0, 0])
         # ========================================================================================#
@@ -137,8 +135,7 @@ class MeshGenerator2d:
             F_x = radius
             F = -force # negative: down and positive: up
         # ========================================================================================#
-            if x_len < 0:
-                x_len = 20*F_x
+            x_len = 500*F_x
 
         # Apply prescribed displacement
         '''
@@ -162,8 +159,8 @@ class MeshGenerator2d:
                 @ y_num(int): y-direction density
         '''
         # ========================================================================================#
-        x_num = 15 #15
-        y_num = 30 #9
+        x_num = 100 #15
+        y_num = 50 #9
         # ========================================================================================#
 
         # Set up the name for the output file
@@ -187,21 +184,28 @@ class MeshGenerator2d:
         else:
             X = [0, F_x, x_len]
             surface_mesh1 = np.linspace(X[0], X[1], int(x_num/3), endpoint=False)
-            #surface_mesh2 = np.logspace(np.log10(X[1]), np.log10(X[2]), int(2*x_num/3))
-            surface_mesh2 = np.linspace(X[1], X[2], 30, endpoint=True)
+            surface_mesh2 = np.logspace(np.log2(X[1]), np.log2(X[2]), int(2*x_num/3), base=2)
+
+#            surface_mesh2 = np.linspace(X[0], X[1], x_num)
             surface_mesh = np.append(surface_mesh1, surface_mesh2)
 
         # Y-direction mesh
+        y_num_ = 5
         Y = [0]
         for i in range(num_layer):
             Y.append(-np.sum(layer_thickness[0:i+1]))
         layer_mesh = np.zeros(0)
         for i in range(num_layer):
-            layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1],50,endpoint=False))
 #            layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1],int((num_layer-i)**0.2*y_num/2),endpoint=False))
-#            temp = np.logspace(np.log(Y[i]+1)/np.log(1.5),np.log(-Y[i+1]+1)/np.log(1.5),20,endpoint=False,base=1.5)
-#            layer_mesh = np.append(layer_mesh,-temp + 1)
-            layer_mesh = np.append(layer_mesh,np.ones(1)*Y[-1])
+            if i > 1:
+                layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1]//10,y_num_*3,endpoint=False))
+                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//10,Y[i+1]//4,y_num_,endpoint=False))
+                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//4,Y[i+1]//2,y_num_,endpoint=False))
+                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//2,Y[i+1],y_num_,endpoint=False))
+            else:
+                layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1]//2,y_num_,endpoint=False))
+                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//2,Y[i+1],y_num_,endpoint=False))
+        layer_mesh = np.append(layer_mesh,np.ones(1)*Y[-1])
         #print("surface mesh: ", surface_mesh)
         #print("layer mesh: ", layer_mesh)
 
@@ -209,7 +213,10 @@ class MeshGenerator2d:
         temp = []
         elem_num = [0]
         for i in range(num_layer):
-            temp.append((surface_mesh.shape[0]-1)*int((num_layer-i)**0.2*y_num/2))
+            if i > 1:
+                temp.append((surface_mesh.shape[0]-1)*6*y_num_)
+            else:
+                temp.append((surface_mesh.shape[0]-1)*2*y_num_)
         for i in range(num_layer):
             element_count = 0
             for j in range(i+1):
@@ -376,17 +383,17 @@ class MeshGenerator2d:
         # Output essential keys
         # (number of nodes, number of layers, number of x-direction point load, y-direction point load...
         #  edge load, x_prescribed disp., y_prescribed disp.)
-        f.write("%d %d %d %d %d %d %d %d\r\n" %\
+        f.write("%d %d %d %d %d %d %d %d\n" %\
                 (num_node, num_elem, num_layer, 0, 0, len(x_force_edge)+len(y_force_edge), len(pre_xdisp), len(pre_ydisp)))
 
         # Output layer information
         for i in range(num_layer):
             f.write("%d %d %d %d %d"%(elem_num[i], elem_num[i+1]-1, analysis[i][0], analysis[i][1], analysis[i][2]))
-            f.write("\r\n")
+            f.write("\n")
             for j in range(len(E[i])):
                 f.write("%f"%(E[i][j]))
                 f.write("%s"%" ")
-            f.write("\r\n")
+            f.write("\n")
         '''
         # Output model information
         f.write("%d\r\n"%(model_num))
@@ -399,18 +406,18 @@ class MeshGenerator2d:
         '''
         # Output y-direction edge load
         for i in y_force_edge:
-            f.write("%d %d\r\n"%(i,2))
-            f.write("%.4f %.4f\r\n"%(0,y_force_edge[i]))
+            f.write("%d %d\n"%(i,2))
+            f.write("%.4f %.4f\n"%(0,y_force_edge[i]))
 
         # Output x-direction edge load
         for i in x_force_edge:
-            f.write("%d %d\r\n"%(i,1))
-            f.write("%.4f %.4f\r\n"%(x_force_edge[i],0))
+            f.write("%d %d\n"%(i,1))
+            f.write("%.4f %.4f\n"%(x_force_edge[i],0))
 
 
         # Output node information
         for i in range(num_node):
-            f.write("%.4f %.4f\r\n" %(node[i][0], node[i][1]))
+            f.write("%.4f %.4f\n" %(node[i][0], node[i][1]))
 
         # # Output layer information
         # for i in range(num_layer):
@@ -432,7 +439,7 @@ class MeshGenerator2d:
 
         # Output element information
         for i in range(num_elem):
-            f.write("%d %d %d %d %d %d %d %d %d\r\n" %\
+            f.write("%d %d %d %d %d %d %d %d %d\n" %\
                 (8,elem[i][0],elem[i][1],elem[i][2],elem[i][3],elem[i][4],elem[i][5],elem[i][6],elem[i][7]))
 
         # # Output y-direction edge load
@@ -449,22 +456,22 @@ class MeshGenerator2d:
         for i in pre_xdisp:
             f.write("%d "%i)
         if (len(pre_xdisp)!=0):
-            f.write("\r\n")
+            f.write("\n")
         for i in pre_xdisp:
             f.write("%.5f "%pre_xdisp[i])
         if (len(pre_xdisp)!=0):
-            f.write("\r\n")
+            f.write("\n")
 
         # Output y-direction prescribed disp.
         for i in pre_ydisp:
             f.write("%d "%i)
         if (len(pre_ydisp)!=0):
-            f.write("\r\n")
+            f.write("\n")
         for i in pre_ydisp:
             f.write("%.5f "%pre_ydisp[i])
         f.close()
         # ==================================Do Not Modified This Part !===========================#
-        return name
+        return layer_depths
 
 # meshgenerator = Mesh_generator()
 # database = Database(vehicle_type = 'EC-135A')

@@ -10,15 +10,20 @@ import os
 import sys
 import numpy as np
 
+from config import Config as cfg
+
 def generate_input(path):
     """Main function for generating .lea file.
     """
     # thickness, E, poisson ratio, slip
-    layer_properties = np.array([[100,300000,0.35,0.0],[0,30000000,0.35,0.0]])
-
-    depth_1 = np.linspace(0, -20, 20, endpoint=False)
-    depth_2 = -np.logspace(np.log2(20), np.log2(100.0), num=20, base=2.0)
-    depth = np.concatenate((depth_1, depth_2), axis=0)
+    layer_properties = np.array([[3,400101.103,0.35,0.0], [12,30008.308,0.40,0.0], [-0.1,6004.562,0.45,0.0]]) # 3 layers
+    #layer_properties = np.array([[3,400101.103,0.35,0.0], [-0.1,6004.562,0.45,0.0]]) # 1 layer
+    # depth_1 = np.linspace(0, -20, 20, endpoint=False)
+    # depth_2 = -np.logspace(np.log2(20), np.log2(100.0), num=20, base=2.0)
+    # depth = np.concatenate((depth_1, depth_2), axis=0)
+    zlim = cfg.DEPTH
+    # depth = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.DEPTH_POINTS, base=10) - 1) # logspace
+    depth = np.linspace(zlim[0], zlim[1], cfg.DEPTH_POINTS, endpoint=True)
 
     # X_cor, Y_cor, Pressure, Area
     # Note: winjulea will automatically convert p * A
@@ -28,6 +33,7 @@ def generate_input(path):
                      [188.5, 114, 215, 243.247],\
                      [188.5, 57, 215, 243.247],\
                      [188.5, 0, 215, 243.247]])
+    loads = np.array([[188.5, 57, 80, 113.097]]) # single tire
     # Evaluation points
     eval_pts = np.array([[216, 57],\
                          [202.2, 57],\
@@ -41,7 +47,7 @@ def parse_output(path):
     """
     if not os.path.exists(path):
         sys.exit("Please run WinJULEA and save the report to '{}'".format(path))
-    evals, depths = get_plot_input(path, 40, 4)
+    evals, depths = get_plot_input(path, cfg.DEPTH_POINTS, 4)
     return evals, depths
 
 

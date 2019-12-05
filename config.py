@@ -37,10 +37,10 @@ class Config():
     }
 
     # > Query space in Z direction
-    DEPTH = [0, -100]
+    DEPTH = [0, -20]
 
     # > No. of grid points in Z directoin (logspace)
-    DEPTH_POINTS = 10
+    DEPTH_POINTS = 20
 
     # ================================= #
     # ====== WinJULEA Analysis ======== #
@@ -77,10 +77,10 @@ class Config():
     DENSE_REGION_2D = 1.5
 
     # > Grid spacing in sparse region in terms of radius R
-    SPACING_SPARSE_2D = 2
+    SPACING_SPARSE_2D = 1/2
 
     # > Grid spacing in dense region in terms of radius R
-    SPACING_DENSE_2D = 1/2
+    SPACING_DENSE_2D = 1/6
 
     # === 3D Analysis === #
     # > Path to save results
@@ -106,7 +106,7 @@ class Config():
     DENSE_REGION_3D = 1.5
 
     # > Grid spacing in sparse region in terms of radius R
-    SPACING_SPARSE_3D = 2
+    SPACING_SPARSE_3D = 1/2
 
     # > Grid spacing in dense region in terms of radius R
-    SPACING_DENSE_3D = 1/2
+    SPACING_DENSE_3D = 1/6

@@ -119,6 +119,9 @@ class Superposition():
         # 1.2. truncate to a subset of tires when num_tires != -1
         if num_tires != -1:
             xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
+            #xy, force, area, radius = xy[4:5,:], force[4:5], area[4:5], radius[4:5]
+            #force[0], area[0], radius[0] = 80, 113.097, 6
+            #num_tires = 1
         else:
             num_tires = len(tires) # update num_tires
 
@@ -222,9 +225,10 @@ class Superposition():
         self.outputFileList = []
         for i in range(len(self.tireCoordinates)):
             filename = filestem + '_' + str(i)
-            generator.generate_mesh(length[i], depth, force[i], area[i], i, filename+'.txt')
+            layer_depths = generator.generate_mesh(length[i], depth, force[i], area[i], i, filename+'.txt')
             self.inputFileList.append(filename + '.txt')
             self.outputFileList.append(filename + '.vtk')
+        self.layer_depths = layer_depths
 
     def _nonlinear_spacing(self, space, tire_range, spacing_dense, spacing_sparse):
         """Generate nonlinear spacing (densified around tire location) in 1D coordinates. This function will detect overlapping ranges and merge them into a larger dense region.
@@ -304,7 +308,8 @@ class Superposition():
         grid.GetPoints(coord)
 
         self.queryMesh = grid
-        self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
+        # self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
+        self.queryPoints = np.array([0,0,0]).reshape(-1,3)
         self.depths = zcoords
 
     def rum_fem2d(self):
@@ -396,6 +401,7 @@ class Superposition():
         # 2. Separate evaluation point results from mesh points results
         self.results_eval, self.results_grid = np.split(superposition, [len(self.evalPoints) * cfg.DEPTH_POINTS])
         self.results_eval = self.results_eval.reshape(len(self.evalPoints), cfg.DEPTH_POINTS, len(cfg.FEM_FIELDS_3D)) # P x D x 6
+        print(self.results_eval[2][0][2]*25.4)
 
     def output(self):
         """Write superposition result to vtk & save superposition results to npy for plotting.
