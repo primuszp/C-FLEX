@@ -86,10 +86,10 @@ class Superposition():
         self.rum_fem2d()
 
         # 4. Superpose
-        self.superpose()
+        #self.superpose()
 
         # 5. Output
-        self.output()
+        #self.output()
 
     def vehicle_info(self, vehicle, num_tires):
         """Collect useful vehicle info.
@@ -118,10 +118,11 @@ class Superposition():
 
         # 1.2. truncate to a subset of tires when num_tires != -1
         if num_tires != -1:
-            xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
-            #xy, force, area, radius = xy[4:5,:], force[4:5], area[4:5], radius[4:5]
-            #force[0], area[0], radius[0] = 80, 113.097, 6
-            #num_tires = 1
+            #xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
+            xy, force, area, radius = xy[4:5,:], force[4:5], area[4:5], radius[4:5]
+            # force[0], area[0], radius[0] = 80, 113.097, 6 # Kim single-tire case
+            force[0], area[0], radius[0] = 80, 113.097, 6 # Issam case
+            num_tires = 1
         else:
             num_tires = len(tires) # update num_tires
 
@@ -308,8 +309,8 @@ class Superposition():
         grid.GetPoints(coord)
 
         self.queryMesh = grid
-        # self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
-        self.queryPoints = np.array([0,0,0]).reshape(-1,3)
+        #self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
+        self.queryPoints = np.array([0,0,0]).reshape(-1,3) # don't query point
         self.depths = zcoords
 
     def rum_fem2d(self):
@@ -401,7 +402,8 @@ class Superposition():
         # 2. Separate evaluation point results from mesh points results
         self.results_eval, self.results_grid = np.split(superposition, [len(self.evalPoints) * cfg.DEPTH_POINTS])
         self.results_eval = self.results_eval.reshape(len(self.evalPoints), cfg.DEPTH_POINTS, len(cfg.FEM_FIELDS_3D)) # P x D x 6
-        print(self.results_eval[2][0][2]*25.4)
+        print("Displacement_Z", self.results_eval[2][:,2])
+        #print(self.results_eval[2][0][2]*25.4)
 
     def output(self):
         """Write superposition result to vtk & save superposition results to npy for plotting.

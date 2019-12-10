@@ -35,11 +35,22 @@ class MeshGenerator2d:
 
     def generate_mesh(self, x_len, y_len, force, area, num, name):
         # @finding: if right boundary is free, depth=140R, radial=21R can match single tire case; if right boundary is x-fix, depth=500R, radial=500R can match
+        run_case = 1
         radius = np.sqrt(area/np.pi)
+        x_ratio = 21
+        y_ratio = 140 #x_ratio * 7
         num_layer = 3
         layer_thickness = np.array([3, 12, 825])
         layer_thickness = np.array([3, 12, 1725]) # match
-        layer_thickness = np.array([3, 12, 140*radius-15])
+        if run_case == 1:
+            # case 1
+            layer_thickness = np.array([3, 12, y_ratio*radius-15])
+        if run_case == 2:
+            # case 2
+            layer_thickness = np.array([4, 10, y_ratio*radius-14])
+        if run_case == 3:
+            # case 3
+            layer_thickness = np.array([3, 18, y_ratio*radius-21])
         layer_depths = np.array([0, -3, -15])
         # layer_thickness = np.array([4, 4, 6, 4, 222])
         # layer_thickness = np.array([150 * 1 / 25.4])
@@ -60,9 +71,24 @@ class MeshGenerator2d:
         '''
         # B_F = (0,-0.0807) # Usually can be (0, -0.0807)
         B_F = (0, 0)
-        E.append([400101.103, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        E.append([30008.308, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        E.append([6004.562, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
+        if run_case == 1:
+            # case 1
+            # E.append([400101.103, 0.35, B_F[0], -0.0839, 6.5*10**(-6), 0])
+            # E.append([30008.308, 0.40, B_F[0], -0.0781, 6.5*10**(-6), 0])
+            # E.append([6004.562, 0.45, B_F[0], -0.0694, 6.5*10**(-6), 0])
+            E.append([400101.103, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
+            E.append([30008.308, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
+            E.append([6004.562, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
+        if run_case == 2:
+            # case 2
+            E.append([300083.1, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
+            E.append([17984.7, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
+            E.append([4061.06, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
+        if run_case == 3:
+            # case 3
+            E.append([400101.103, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
+            E.append([30008.308, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
+            E.append([6004.562, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
         #E.append([7500.0, 0.4, B_F[0], B_F[1], 6.5*10**(-6), 0])# Do not modify two B_F terms
         # E.append([20000.0, 0.2, B_F[0], -0.0856, 6.5*10**(-6), 0])
         # E.append([6750,45000,0.15,0.45,15734,0, -0.0856, 6.5*10**(-6), 0])
@@ -135,7 +161,7 @@ class MeshGenerator2d:
             F_x = radius
             F = -force # negative: down and positive: up
         # ========================================================================================#
-            x_len = 500*F_x
+            x_len = x_ratio*F_x
 
         # Apply prescribed displacement
         '''
@@ -160,7 +186,7 @@ class MeshGenerator2d:
         '''
         # ========================================================================================#
         x_num = 100 #15
-        y_num = 50 #9
+        y_num = 30 #9
         # ========================================================================================#
 
         # Set up the name for the output file
@@ -185,7 +211,7 @@ class MeshGenerator2d:
             X = [0, F_x, x_len]
             surface_mesh1 = np.linspace(X[0], X[1], int(x_num/3), endpoint=False)
             surface_mesh2 = np.logspace(np.log2(X[1]), np.log2(X[2]), int(2*x_num/3), base=2)
-
+            #surface_mesh2 = np.linspace(X[1], X[2], x_num)
 #            surface_mesh2 = np.linspace(X[0], X[1], x_num)
             surface_mesh = np.append(surface_mesh1, surface_mesh2)
 

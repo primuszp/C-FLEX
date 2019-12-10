@@ -1,9 +1,9 @@
 """
-WinJULEA input/output interface.
+WinJULEA automated input/output interface.
 
 Copyright (c) 2019 Jiayi Luo
 Licensed under the GPL License (see LICENSE for details)
-Written by Jiayi Luo, November 2019.
+Written by Jiayi Luo, Modified by Haohang Huang, November 2019.
 """
 
 import os
@@ -15,30 +15,54 @@ from config import Config as cfg
 def generate_input(path):
     """Main function for generating .lea file.
     """
-    # thickness, E, poisson ratio, slip
-    layer_properties = np.array([[3,400101.103,0.35,0.0], [12,30008.308,0.40,0.0], [-0.1,6004.562,0.45,0.0]]) # 3 layers
-    #layer_properties = np.array([[3,400101.103,0.35,0.0], [-0.1,6004.562,0.45,0.0]]) # 1 layer
-    # depth_1 = np.linspace(0, -20, 20, endpoint=False)
-    # depth_2 = -np.logspace(np.log2(20), np.log2(100.0), num=20, base=2.0)
-    # depth = np.concatenate((depth_1, depth_2), axis=0)
-    zlim = cfg.DEPTH
-    # depth = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.DEPTH_POINTS, base=10) - 1) # logspace
-    depth = np.linspace(zlim[0], zlim[1], cfg.DEPTH_POINTS, endpoint=True)
+    # =====================
+    # Input layer properties: [thickness, E, poisson ratio, slip]
+    # =====================
+    # Three different cases in Kim's dissertation (2007)
+    run_case = 1
+    if run_case == 1:
+        # case 1
+        layer_properties = np.array([[3,400101.103,0.35,0.0], [12,30008.308,0.40,0.0], [-0.1,6004.562,0.45,0.0]])
+    if run_case == 2:
+        # case 2
+        layer_properties = np.array([[4,300083.1,0.35,0.0], [10,17984.7,0.40,0.0], [-0.1,4061.06,0.45,0.0]]) # 3 layers
+    if run_case == 3:
+        # case 3
+        layer_properties = np.array([[3,400101.103,0.35,0.0], [18,30008.308,0.40,0.0], [-0.1,6004.562,0.45,0.0]])
 
-    # X_cor, Y_cor, Pressure, Area
-    # Note: winjulea will automatically convert p * A
+    # =====================
+    # Input loads: [X_coord, Y_coord, Pressure, Area]
+    # Note: WinJULEA will automatically convert F = p * A
+    # =====================
     loads = np.array([[243.5, 114, 215, 243.247],\
                      [243.5, 57, 215, 243.247],\
                      [243.5, 0, 215, 243.247],\
                      [188.5, 114, 215, 243.247],\
                      [188.5, 57, 215, 243.247],\
                      [188.5, 0, 215, 243.247]])
-    loads = np.array([[188.5, 57, 80, 113.097]]) # single tire
-    # Evaluation points
+    # loads = np.array([[188.5, 57, 80, 113.097]]) # single tire case in Kim 2007
+
+    # =====================
+    # Input evaluation points: [X_coord, Y_coord]
+    # =====================
     eval_pts = np.array([[216, 57],\
                          [202.2, 57],\
                          [188.5, 57],\
                          [188.5, 28.5]])
+
+    # =====================
+    # Input evaluation depths: [Z_coord]
+    # Note: WinJULEA takes negative values
+    # =====================
+    # Option 1: lin + log
+    # depth_1 = np.linspace(0, -20, 20, endpoint=False)
+    # depth_2 = -np.logspace(np.log2(20), np.log2(100.0), num=20, base=2.0)
+    # depth = np.concatenate((depth_1, depth_2), axis=0)
+
+    # Option 2: lin
+    zlim = cfg.DEPTH
+    depth = np.linspace(zlim[0], zlim[1], cfg.DEPTH_POINTS, endpoint=True)
+    # depth = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.DEPTH_POINTS, base=10) - 1) # logspace
 
     create_lea(path, layer_properties, depth, loads, eval_pts)
 

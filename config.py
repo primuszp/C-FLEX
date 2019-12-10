@@ -42,6 +42,13 @@ class Config():
     # > No. of grid points in Z directoin (logspace)
     DEPTH_POINTS = 20
 
+    # > Analyzed depth for 3D
+    DEPTH_3D = [0, -3, -15, -1232]
+
+    # > Mesh density along depth direction
+    DEPTH_LINSPACE_3D = 5
+    DEPTH_LOGSPACE_3D = 5
+
     # ================================= #
     # ====== WinJULEA Analysis ======== #
     # ================================= #
@@ -94,10 +101,10 @@ class Config():
     PLOT_3D = False
 
     # > Mesh space in terms of p2p distance in X direction
-    MESH_RANGE_X_3D = 1
+    MESH_RANGE_X_3D = 2
 
     # > Mesh space in terms of p2p distance in Y direction
-    MESH_RANGE_Y_3D = 0.5
+    MESH_RANGE_Y_3D = 1.5
 
     # > Mesh space in terms of tire radius in both X & Y when there is single tire only (e.g. 10xR)
     MESH_RANGE_SINGLE_3D = 10
@@ -106,7 +113,7 @@ class Config():
     DENSE_REGION_3D = 1.5
 
     # > Grid spacing in sparse region in terms of radius R
-    SPACING_SPARSE_3D = 1/2
+    SPACING_SPARSE_3D = 1
 
     # > Grid spacing in dense region in terms of radius R
-    SPACING_DENSE_3D = 1/6
+    SPACING_DENSE_3D = 1/4

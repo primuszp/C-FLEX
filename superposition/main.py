@@ -21,9 +21,9 @@ from superposition.fem3d import FEM3D
 
 # control panel
 CLEAN = 0
-LEA_IN = 1
+LEA_IN = 0
 LEA_OUT = 0
-D2 = 0
+D2 = 1
 D3 = 0
 PLOT = 0
 
@@ -55,6 +55,7 @@ def main():
 
     # plot
     if PLOT:
+        """
         # LEA vs superposition 2D
         evals_lea = np.load(os.path.join(cfg.PATH_LEA, 'evals'+cfg.FILE_SUFFIX_LEA+'.npy'))
         depths_lea = np.load(os.path.join(cfg.PATH_LEA, 'depths'+cfg.FILE_SUFFIX_LEA+'.npy'))
@@ -62,7 +63,8 @@ def main():
         depths_2d = np.load(os.path.join(cfg.PATH_2D, 'depths'+cfg.FILE_SUFFIX_2D+'.npy'))
         plot_eval_depth_lea_2d(evals_lea, depths_lea, evals_2d, depths_2d, cfg.PATH_LEA)
         """
-        # LEA vs superposition 2D vs 3D comparison
+
+        # LEA vs superposition 2D vs 3D
         evals_lea = np.load(os.path.join(cfg.PATH_LEA, 'evals'+cfg.FILE_SUFFIX_LEA+'.npy'))
         depths_lea = np.load(os.path.join(cfg.PATH_LEA, 'depths'+cfg.FILE_SUFFIX_LEA+'.npy'))
         evals_2d = np.load(os.path.join(cfg.PATH_2D, 'evals'+cfg.FILE_SUFFIX_2D+'.npy'))
@@ -71,12 +73,6 @@ def main():
         depths_3d = np.load(os.path.join(cfg.PATH_3D, 'depths'+cfg.FILE_SUFFIX_3D+'.npy'))
         plot_eval_depth_all(evals_lea, depths_lea, evals_2d, depths_2d, evals_3d, depths_3d, cfg.PATH_3D)
 
-        # no-weight vs weight comparison
-        evals_2d_weight = np.load(os.path.join(cfg.PATH_2D, 'evals'+cfg.FILE_SUFFIX_2D+'_weight.npy'))
-        evals_3d_weight = np.load(os.path.join(cfg.PATH_3D, 'evals'+cfg.FILE_SUFFIX_3D+'_weight.npy'))
-        plot_eval_depth_weight_2d(evals_2d, depths_2d, evals_2d_weight, depths_2d, cfg.PATH_2D)
-        plot_eval_depth_weight_3d(evals_3d, depths_3d, evals_3d_weight, depths_3d, cfg.PATH_3D)
-        """
     database.close()
 
 def clean_folder(name):

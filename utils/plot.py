@@ -119,6 +119,7 @@ def plot_eval_depth_all(evals_lea, depths_lea, evals_2d, depths_2d, evals_3d, de
 
         ax[0].set_xlabel('Vertical Displacement (in.)')
         ax[1].set_xlabel('Vertical Stress (psi)')
+        ax[0].set_xlim(0, max(np.max(evals_lea[i][:,2]),np.max(evals_2d[i][:,2]))*1.3)
 
         data = evals_lea[i] # D x 6
         ax[0].plot(data[:,2], depths_lea, marker='o', color='red', markersize=2)
@@ -191,98 +192,6 @@ def plot_eval_depth_lea_2d(evals_lea, depths_lea, evals_2d, depths_2d, path=None
 
         if path != None:
             plt.savefig(os.path.join(path, 'eval_{}_lea_2d.png'.format(i)), dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        else:
-            plt.show()
-
-def plot_eval_depth_weight_2d(evals_noweight, depths, evals_weight, depths_weight, path=None):
-    """Plot 2D results at evaluation points along depth comparing weight effect.
-    Args:
-        evals_* [P x D x 6]: superposition results at evaluation points. P is No. of points, D is No. of depth, 6 is result fields ['Displacement_X', 'Displacement_Y', 'Displacement_Z', 'Normal_X', 'Normal_Y', 'Normal_Z'].
-        depths_* [D x 1]: depth values (negative!)
-        path [str]: path for saving figure. None if plot only.
-    """
-    # legend
-    custom_legend = [
-        plt.Line2D([],[], marker='o', color='blue', linestyle='None'),
-        plt.Line2D([],[], marker='o', color='black', linestyle='None')
-    ]
-
-    for i in range(len(evals_weight)):
-        fig = plt.figure()
-        ax = fig.subplots(ncols=2) # y is depth
-        plt.suptitle('Responses at Evaluation Point {}'.format(i), y=0.01)
-
-        ax[0].set_xlabel('Vertical Displacement (in.)')
-        ax[1].set_xlabel('Vertical Stress (psi)')
-
-        data = evals_noweight[i] # D x 6
-        ax[0].plot(data[:,2], depths, marker='o', color='blue', markersize=2)
-        ax[1].plot(data[:,5], depths, marker='o', color='blue', markersize=2)
-        data = evals_weight[i] # D x 6
-        ax[0].plot(data[:,2], depths_weight, marker='o', color='black', markersize=2)
-        ax[1].plot(data[:,5], depths_weight, marker='o', color='black', markersize=2)
-
-        for j in range(2): # two subplots
-            ax[j].xaxis.set_ticks_position('top')
-            ax[j].xaxis.set_label_position('top')
-            ax[j].minorticks_on()
-            ax[j].grid(which='major', linestyle='-', color='gray')
-            ax[j].grid(which='minor', linestyle='--')
-            ax[j].set_ylabel('Depth (in.)')
-            ax[j].tick_params(labelsize='small')
-            ax[j].legend(custom_legend, ['2D Superposition (w/o weight)', '2D Superposition (with weight)'], loc='lower right', fontsize='small', framealpha=0.5)
-
-        plt.tight_layout()
-
-        if path != None:
-            plt.savefig(os.path.join(path, 'eval_{}_2d_weight.png'.format(i)), dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        else:
-            plt.show()
-
-def plot_eval_depth_weight_3d(evals_noweight, depths, evals_weight, depths_weight, path=None):
-    """Plot 3D results at evaluation points along depth comparing weight effect.
-    Args:
-        evals_* [P x D x 6]: superposition results at evaluation points. P is No. of points, D is No. of depth, 6 is result fields ['Displacement_X', 'Displacement_Y', 'Displacement_Z', 'Normal_X', 'Normal_Y', 'Normal_Z'].
-        depths_* [D x 1]: depth values (negative!)
-        path [str]: path for saving figure. None if plot only.
-    """
-    # legend
-    custom_legend = [
-        plt.Line2D([],[], marker='o', color='blue', linestyle='None'),
-        plt.Line2D([],[], marker='o', color='black', linestyle='None')
-    ]
-
-    for i in range(len(evals_weight)):
-        fig = plt.figure()
-        ax = fig.subplots(ncols=2) # y is depth
-        plt.suptitle('Responses at Evaluation Point {}'.format(i), y=0.01)
-
-        ax[0].set_xlabel('Vertical Displacement (in.)')
-        ax[1].set_xlabel('Vertical Stress (psi)')
-
-        data = evals_noweight[i] # D x 6
-        ax[0].plot(data[:,2], depths, marker='o', color='blue', markersize=2)
-        ax[1].plot(data[:,5], depths, marker='o', color='blue', markersize=2)
-        data = evals_weight[i] # D x 6
-        ax[0].plot(data[:,2], depths_weight, marker='o', color='black', markersize=2)
-        ax[1].plot(data[:,5], depths_weight, marker='o', color='black', markersize=2)
-
-        for j in range(2): # two subplots
-            ax[j].xaxis.set_ticks_position('top')
-            ax[j].xaxis.set_label_position('top')
-            ax[j].minorticks_on()
-            ax[j].grid(which='major', linestyle='-', color='gray')
-            ax[j].grid(which='minor', linestyle='--')
-            ax[j].set_ylabel('Depth (in.)')
-            ax[j].tick_params(labelsize='small')
-            ax[j].legend(custom_legend, ['3D (w/o weight)', '3D (with weight)'], loc='lower right', fontsize='small', framealpha=0.5)
-
-        plt.tight_layout()
-
-        if path != None:
-            plt.savefig(os.path.join(path, 'eval_{}_3d_weight.png'.format(i)), dpi=300, bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()

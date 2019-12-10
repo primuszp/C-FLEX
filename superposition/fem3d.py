@@ -41,6 +41,7 @@ class FEM3D():
         queryMesh [VTK grid]: VTK mesh for Q8 nodal results
         queryPoints [n x 3]: 3D (x,y,z) coordinates of each evaluation points
         depths [n x 1]: depths of the mesh (negative values!)
+        interface [L-1 x 1]: interface index in zcoord
 
         inputFile [str]: input filename
         outputFile [str]: output filename
@@ -62,6 +63,7 @@ class FEM3D():
         self.queryMesh = None
         self.queryPoints = None
         self.depths = None
+        self.interface = None
 
         self.inputFile = None
         self.outputFile = None
@@ -151,7 +153,7 @@ class FEM3D():
         """
         # 0.0. collect parameters
         layers = cfg.LAYERS
-        depth = cfg.DEPTH
+        depth = cfg.DEPTH_3D
         xy = self.tireCoordinates
         force = self.tireForces
         area = self.tireAreas
@@ -187,8 +189,8 @@ class FEM3D():
         xcoords = vtk_to_numpy(self.queryMesh.GetXCoordinates())
         ycoords = vtk_to_numpy(self.queryMesh.GetYCoordinates())
         zcoords = vtk_to_numpy(self.queryMesh.GetZCoordinates())
-        # mesh_generator = MeshGenerator3d(xcoords, ycoords, zcoords)
-        # mesh_generator.run(self.inputFile, self.tireCoordinates, self.tireForces, self.tireAreas)
+        mesh_generator = MeshGenerator3d(xcoords, ycoords, zcoords, self.interface)
+        mesh_generator.run(self.inputFile, self.tireCoordinates, self.tireForces, self.tireAreas)
 
     def _nonlinear_spacing(self, space, tire_range, spacing_dense, spacing_sparse):
         """Generate nonlinear spacing (densified around tire location) in 1D coordinates. This function will detect overlapping ranges and merge them into a larger dense region.
@@ -253,8 +255,19 @@ class FEM3D():
         yranges = np.hstack([(ytire - rtire).reshape(-1,1), (ytire + rtire).reshape(-1,1)])
         xcoords = self._nonlinear_spacing(xlim, xranges, spacing_dense, spacing_sparse)
         ycoords = self._nonlinear_spacing(ylim, yranges, spacing_dense, spacing_sparse)
-        zcoords = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.DEPTH_POINTS, base=10) - 1) # logspace
+        # Single-layer depth points
+        # zcoords = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.DEPTH_POINTS, base=10) - 1) # logspace
         # zcoords = np.linspace(*zlim, num=cfg.DEPTH_POINTS) # linspace
+
+        # Multi-layer depth points
+        num_layers = len(zlim) - 1
+        zcoord = []
+        self.interface = np.zeros(num_layers-1)
+        for l in range(num_layers-1):
+            zcoord.append(np.linspace(zlim[l], zlim[l+1], num=cfg.DEPTH_LINSPACE_3D, endpoint=False))
+            self.interface[l] = cfg.DEPTH_LINSPACE_3D * (l+1)
+        zcoord.append(-np.logspace(np.log10(-zlim[-2]), np.log10(-zlim[-1]), num=cfg.DEPTH_LOGSPACE_3D, base=10, endpoint=True))
+        zcoords = np.concatenate(zcoord, axis=0)
 
         # 2. Generate VTK rectilinear grid
         grid = vtk.vtkRectilinearGrid()
@@ -268,8 +281,10 @@ class FEM3D():
         grid.GetPoints(coord)
 
         self.queryMesh = grid
-        self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
-        self.depths = zcoords
+        # self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
+        self.queryPoints = np.array([0,0,0]).reshape(-1,3) # don't query point
+        # query depths
+        self.depths = np.linspace(*cfg.DEPTH, num=cfg.DEPTH_POINTS) # linspace
 
     def run_fem3d(self):
         """Execute FEM3D program.

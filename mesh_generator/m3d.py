@@ -20,7 +20,9 @@ class MeshGenerator3d:
         '''
         return (dim[0]*dim[1])*coords[2] + dim[0]*coords[1] + coords[0]
 
-    def __init__(self, x, y, h):
+    def __init__(self, x, y, h, interface):
+        self.surface_numelement = (len(x) - 1)*(len(y) - 1)
+        self.interface = interface
 
         # origins are the target mesh coordinates
         self.x_origin = x
@@ -36,11 +38,15 @@ class MeshGenerator3d:
         # Layer information
         self.E = []
         self.layer_thickness = h[0] - h[-1]
-        B_F = (0,0,-0.0607) # Usually can be (0,0,-0.0807)
-        self.E.append([300000.0, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
+        B_F = (0,0,0) # Usually can be (0,0,-0.0807)
+        self.E.append([400101.103, 0.35, B_F[0], B_F[1], B_F[2], 6.5*10**(-6), 0])
+        self.E.append([30008.308, 0.40, B_F[0], B_F[1], B_F[2], 6.5*10**(-6), 0])
+        self.E.append([6004.562, 0.45, B_F[0], B_F[1], B_F[2], 6.5*10**(-6), 0])
 
         self.analysis = []
         self.analysis.append([0, 0, 0])# analysis[0]->anisotropic; analysis[1]->nonlinear; analysis[2]->no-tension; analysis[3]->viscoelastic or not
+        self.analysis.append([0, 0, 0])
+        self.analysis.append([0, 0, 0])
 
         # Extracting indices for each element
         # Each Cell is composed by eight smaller cells
@@ -181,9 +187,10 @@ class MeshGenerator3d:
         uGrid = vtk.vtkUnstructuredGrid()
         uGrid.SetPoints(self.points)
         self.cell_pt_list = []
-        for i in range(len(self.x_origin) - 1):
-            for j in range(len(self.y_origin) - 1):
-                for k in range(len(self.h_origin) - 1):
+        for k in range(len(self.h_origin) - 1):
+            for i in range(len(self.x_origin) - 1):
+                for j in range(len(self.y_origin) - 1):
+            
                     cell_id_list = []
 
                     # 0,0,0
@@ -310,17 +317,21 @@ class MeshGenerator3d:
         f = open(name,"w")
         num_elem = self.uGrid.GetNumberOfCells()
         num_node = self.true_pts.shape[0]
-        num_layer = 1
+        num_layer = len(self.interface) + 1
         # Output essential keys
         # (number of nodes, number of layers, number of x-direction point load, y-direction point load...
         #  edge load, x_prescribed disp., y_prescribed disp.)
         f.write("%d %d %d %d %d %d %d %d %d\n" %\
                 (num_node, num_elem, num_layer, 0, 0, len(self.applied_forces), len(self.x_fixed), len(self.y_fixed), len(self.h_fixed)))
 
+        num_elems = [0]
+        for i in range(num_layer - 1):
+            num_elems.append(self.interface[i]*self.surface_numelement)
+        num_elems.append(num_elem)
         # Output layer information
         for i in range(num_layer):
             #f.write("%d %d %d %d %d"%(elem_num[i], elem_num[i+1]-1, analysis[i][0], analysis[i][1], analysis[i][2]))
-            f.write("%d %d %d %d %d"%(0, num_elem - 1, self.analysis[i][0], self.analysis[i][1], self.analysis[i][2]))
+            f.write("%d %d %d %d %d"%(num_elems[i], num_elems[i+1] - 1, self.analysis[i][0], self.analysis[i][1], self.analysis[i][2]))
             f.write("\n")
             for j in range(len(self.E[i])):
                 f.write("%f"%(self.E[i][j]))
@@ -401,9 +412,10 @@ if __name__ == '__main__':
     # === Input ==== #
     x = np.array([0, 6, 12, 18, 24, 30, 36])
     y = np.array([0, 6, 12, 18, 24, 30, 36])
-    z = np.array([0, -6, -12, -18])
+    z = np.array([0, -1, -2, -3, -6, -9, -12, -24, -36, -48])
+    interface = np.array([3, 6])
     centers = np.array([[12, 12], [24, 24]])
     forces = np.array([10, 10])
     areas = np.array([400, 400])
-    m = meshGenerator3d(x, y, z)
+    m = MeshGenerator3d(x, y, z, interface)
     m.run("vehicle.txt", centers, forces, areas)
