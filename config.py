@@ -6,6 +6,8 @@ Licensed under the GPL License (see LICENSE for details)
 Written by Haohang Huang, November 2019.
 """
 
+import numpy as np
+
 class Config():
     # ============================== #
     # ====== Hyper Parameters ====== #
@@ -36,11 +38,34 @@ class Config():
         '2' : {'Thickness': 5, 'Modulus': 7500, 'Poisson': 0.35}
     }
 
-    # > Query space in Z direction
+    # ================================= #
+    # === Manual Input Procedure ====== #
+    # ================================= #
+    # > Manual input produre or automation read from ERDC database
+    MANUAL = True
+
+    MANUAL_TIRE_COORDS = np.array([[0,0]]).reshape(-1,2)
+
+    MANUAL_TIRE_FORCES = np.array([80.0])
+
+    MANUAL_TIRE_AREAS = np.array([246.057])
+
+    MANUAL_TIRE_RADII = np.array([8.85])
+
+    MANUAL_EVAL_POINTS = np.array([[0,0],[8,0],[12,0],[18,0],[24,0],[36,0],[48,0],[60,0],[72,0]]).reshape(-1,2)
+
+    MANUAL_DEPTH_COORDS = np.array([0.0])
+
+    # > Query depth range
     DEPTH = [0, -20]
 
-    # > No. of grid points in Z directoin (logspace)
+    # > No. of grid points in Z direction
     DEPTH_POINTS = 20
+
+    DEPTH_COORDS = - (np.logspace(np.log10(-DEPTH[0]+1), np.log10(-DEPTH[1]+1), num=DEPTH_POINTS, base=10) - 1) # logspace
+    # DEPTH_COORDS = np.linspace(*self.DEPTH, num=self.DEPTH_POINTS) # linspace
+    if MANUAL:
+        DEPTH_COORDS = MANUAL_DEPTH_COORDS # user-defined
 
     # > Analyzed depth for 3D
     DEPTH_3D = [0, -3, -15, -1232]
@@ -67,9 +92,13 @@ class Config():
     # > File suffix. e.g., input_2d.txt, input_2d.vtk, evals_2d.npy
     FILE_SUFFIX_2D = '_2d'
 
-    # > Plot displacement/stress depth profile or net
+    # > Plot displacement/stress depth profile or not
     # True: plot & save .npy, False: save .npy
     PLOT_2D = False
+
+    # > Superpose full 3D space (True) or just at given evaluation points
+    SUPERPOSITION_MESH = False
+    # Note: if False, parameters below are not used
 
     # > Mesh space in terms of p2p distance in X direction
     MESH_RANGE_X_2D = 1
@@ -89,7 +118,9 @@ class Config():
     # > Grid spacing in dense region in terms of radius R
     SPACING_DENSE_2D = 1/6
 
-    # === 3D Analysis === #
+    # ================================= #
+    # === 3D Analysis ===
+    # ================================= #
     # > Path to save results
     PATH_3D = './results'
 

@@ -20,6 +20,17 @@ Problem so far:
 import numpy as np
 import os
 
+class Layer:
+    def __init__(self, name, thickness, layer_param, anisotropy, nonlinear, tension, model_num=None, model_param=None):
+        self.name = name
+        self.thickness = thickness
+        self.layer_param = layer_param
+        self.anisotropy = anisotropy
+        self.nonlinear = nonlinear
+        self.tension = tension
+        self.model_num = model_num
+        self.model_param = model_param
+
 class MeshGenerator2d:
     '''
         Generate mesh
@@ -35,33 +46,83 @@ class MeshGenerator2d:
 
     def generate_mesh(self, x_len, y_len, force, area, num, name):
         # @finding: if right boundary is free, depth=140R, radial=21R can match single tire case; if right boundary is x-fix, depth=500R, radial=500R can match
-        run_case = 1
+
         radius = np.sqrt(area/np.pi)
         x_ratio = 21
         y_ratio = 140 #x_ratio * 7
-        num_layer = 3
-        layer_thickness = np.array([3, 12, 825])
-        layer_thickness = np.array([3, 12, 1725]) # match
-        if run_case == 1:
-            # case 1
-            layer_thickness = np.array([3, 12, y_ratio*radius-15])
-        if run_case == 2:
-            # case 2
-            layer_thickness = np.array([4, 10, y_ratio*radius-14])
-        if run_case == 3:
-            # case 3
-            layer_thickness = np.array([3, 18, y_ratio*radius-21])
-        layer_depths = np.array([0, -3, -15])
-        # layer_thickness = np.array([4, 4, 6, 4, 222])
-        # layer_thickness = np.array([150 * 1 / 25.4])
+#        layer_thickness = np.array([3, 12, 825])
+#        layer_thickness = np.array([3, 12, 1725]) # match
+        """
+        layers = []
+        layers.append(
+                Layer('HMA', 3, np.array([400101.103, 0.35, 0, 0, 6.5*10**(-6), 0]),
+                  0, 0, 0)
+        )
+        layers.append(
+            Layer('Base', 12, np.array([30008.308, 0.40, 0, 0, 6.5*10**(-6), 0]),
+                  0, 1, 0, 2, [2212.5, 0.6577, -0.0657])
+        )
+        layers.append(
+            Layer('Subbase', 12, np.array([30008.308, 0.40, 0, 0, 6.5*10**(-6), 0]),
+                  0, 1, 0, 2, [2212.5, 0.6577, -0.0657])
+        )
+        layers.append(
+            Layer('Subgrade', y_ratio*radius - 27, np.array([6004.562, 0.45, 0, 0, 6.5*10**(-6), 0]),
+                  0, 1, 0, 5, [6004.562, 5.95, 1000, 200])
+        )
+        num_layer = len(layers)
+        layer_depths = [0, -3, -15, -27]
+        """
+        # Issam's case
+        layers = []
+        layers.append(
+                Layer('HMA', 8.5, np.array([400101.103, 0.35, 0, 0, 6.5*10**(-6), 0]),
+                0, 0, 0)
+        )
+        layers.append(
+            Layer('Base', 11.8, np.array([30008.308, 0.40, 0, 0, 6.5*10**(-6), 0]),
+            0, 0, 0)
+        )
+        layers.append(
+            Layer('Subbase', 17.5, np.array([30008.308, 0.40, 0, 0, 6.5*10**(-6), 0]),
+            0, 0, 0)
+        )
+        layers.append(
+            Layer('Subgrade', y_ratio*radius - 37.8, np.array([6004.562, 0.45, 0, 0, 6.5*10**(-6), 0]),
+            0, 0, 0)
+        )
+        num_layer = len(layers)
+        layer_depths = [0, -8.5, -20.3, -37.8]
+        """
+        layers = []
+        layers.append(
+            Layer('HMA', 3, np.array([400101.103, 0.35, 0, 0, 6.5*10**(-6), 0]),
+            0, 0, 0)
+        )
+        layers.append(
+            Layer('Base', 12, np.array([30008.308, 0.40, 0, 0, 6.5*10**(-6), 0]),
+            0, 0, 0)
+        )
+        layers.append(
+            Layer('Subgrade', y_ratio*radius - 15, np.array([6004.562, 0.45, 0, 0, 6.5*10**(-6), 0]),
+            0, 0, 0)
+        )
+        num_layer = len(layers)
+        layer_depths = [0, -3, -15]
+        """
+        layer_thickness = []
+        for layer in layers:
+            layer_thickness.append(layer.thickness)
         # ========================================================================================#
 
-        # model_num = 2
-        # model_para = [2212.5, 0.6577, -0.0657]
-        # iter_para = [0, 0, 0.3, 0.3] # 5: gravity incremental #; loading incremental #; damping ratio for each increment
-
+        iter_para = [0, 0, 0.3, 0.3] # 5: gravity incremental #; loading incremental #; damping ratio for each increment
+        ITER_FLAG = False
+        for layer in layers:
+            if layer.nonlinear:
+                ITER_FLAG = True
+                break
         # Apply the properties for each layer
-        E = []
+#        E = []
         # ========================================================================================#
         '''
             Required Inputs for each layer information:
@@ -69,46 +130,8 @@ class MeshGenerator2d:
                 @ E(list): A list of all the layers and the properties of dimension (num_layer)
                 @ B_F(tuple): A tuple for the body force. B_F[0]->direction, 0->down; B_F[1]->amplitude
         '''
-        # B_F = (0,-0.0807) # Usually can be (0, -0.0807)
-        B_F = (0, 0)
-        if run_case == 1:
-            # case 1
-            # E.append([400101.103, 0.35, B_F[0], -0.0839, 6.5*10**(-6), 0])
-            # E.append([30008.308, 0.40, B_F[0], -0.0781, 6.5*10**(-6), 0])
-            # E.append([6004.562, 0.45, B_F[0], -0.0694, 6.5*10**(-6), 0])
-            E.append([400101.103, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
-            E.append([30008.308, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
-            E.append([6004.562, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        if run_case == 2:
-            # case 2
-            E.append([300083.1, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
-            E.append([17984.7, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
-            E.append([4061.06, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        if run_case == 3:
-            # case 3
-            E.append([400101.103, 0.35, B_F[0], B_F[1], 6.5*10**(-6), 0])
-            E.append([30008.308, 0.40, B_F[0], B_F[1], 6.5*10**(-6), 0])
-            E.append([6004.562, 0.45, B_F[0], B_F[1], 6.5*10**(-6), 0])
-        #E.append([7500.0, 0.4, B_F[0], B_F[1], 6.5*10**(-6), 0])# Do not modify two B_F terms
-        # E.append([20000.0, 0.2, B_F[0], -0.0856, 6.5*10**(-6), 0])
-        # E.append([6750,45000,0.15,0.45,15734,0, -0.0856, 6.5*10**(-6), 0])
-        #E.append([7500.0, 0.45, B_F[0], -0.0856, 6.5*10**(-6), 0])
         # ========================================================================================#
 
-        # Apply extra information about anisotropic, non-linear, no-tension analysis
-        analysis = []
-        # ========================================================================================#
-        '''
-            Required Inputs for analysis requirement:
-            Args:
-                @ analysis(list): A list of all the analysis requirement of dimension (num_layer)
-        '''
-        analysis.append([0, 0, 0])# analysis[0]->anisotropic; analysis[1]->nonlinear; analysis[2]->no-tension; analysis[3]->viscoelastic or not
-        analysis.append([0, 0, 0])# 0->Needed; 1->Do not need
-        analysis.append([0, 0, 0])
-        # analysis.append([0, 0, 0])
-        # analysis.append([0, 0, 0])
-        # ========================================================================================#
 
         # Apply load vector and the specimen dimension (Test or Pavement)
         # ========================================================================================#
@@ -185,8 +208,8 @@ class MeshGenerator2d:
                 @ y_num(int): y-direction density
         '''
         # ========================================================================================#
-        x_num = 100 #15
-        y_num = 30 #9
+        x_num = 30 #15
+        y_num = [10,10,10,10]
         # ========================================================================================#
 
         # Set up the name for the output file
@@ -216,22 +239,14 @@ class MeshGenerator2d:
             surface_mesh = np.append(surface_mesh1, surface_mesh2)
 
         # Y-direction mesh
-        y_num_ = 5
         Y = [0]
         for i in range(num_layer):
             Y.append(-np.sum(layer_thickness[0:i+1]))
         layer_mesh = np.zeros(0)
-        for i in range(num_layer):
-#            layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1],int((num_layer-i)**0.2*y_num/2),endpoint=False))
-            if i > 1:
-                layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1]//10,y_num_*3,endpoint=False))
-                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//10,Y[i+1]//4,y_num_,endpoint=False))
-                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//4,Y[i+1]//2,y_num_,endpoint=False))
-                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//2,Y[i+1],y_num_,endpoint=False))
-            else:
-                layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1]//2,y_num_,endpoint=False))
-                layer_mesh = np.append(layer_mesh,np.linspace(Y[i+1]//2,Y[i+1],y_num_,endpoint=False))
-        layer_mesh = np.append(layer_mesh,np.ones(1)*Y[-1])
+        for i in range(num_layer-1):
+            layer_mesh = np.append(layer_mesh,np.linspace(Y[i],Y[i+1],y_num[i],endpoint=False))
+        layer_mesh = np.append(layer_mesh, - np.logspace(np.log10(-Y[-2]),np.log10(-Y[-1]),num=y_num[-1],base=10,endpoint=True))
+        #layer_mesh = np.append(layer_mesh,np.ones(1)*Y[-1])
         #print("surface mesh: ", surface_mesh)
         #print("layer mesh: ", layer_mesh)
 
@@ -239,10 +254,7 @@ class MeshGenerator2d:
         temp = []
         elem_num = [0]
         for i in range(num_layer):
-            if i > 1:
-                temp.append((surface_mesh.shape[0]-1)*6*y_num_)
-            else:
-                temp.append((surface_mesh.shape[0]-1)*2*y_num_)
+            temp.append((surface_mesh.shape[0]-1)*y_num[i])
         for i in range(num_layer):
             element_count = 0
             for j in range(i+1):
@@ -252,6 +264,7 @@ class MeshGenerator2d:
         # Generate Mesh
         x = surface_mesh
         y = layer_mesh
+
         num_elem = (x.shape[0]-1)*(y.shape[0]-1)
         num_node = (x.shape[0]*2-1)*(y.shape[0]*2-1) - num_elem
         # Another equivalent way: num_node = (x.shape[0]*2-1)*y.shape[0] + x.shape[0]*(y.shape[0] - 1)
@@ -412,24 +425,27 @@ class MeshGenerator2d:
         f.write("%d %d %d %d %d %d %d %d\n" %\
                 (num_node, num_elem, num_layer, 0, 0, len(x_force_edge)+len(y_force_edge), len(pre_xdisp), len(pre_ydisp)))
 
+
         # Output layer information
         for i in range(num_layer):
-            f.write("%d %d %d %d %d"%(elem_num[i], elem_num[i+1]-1, analysis[i][0], analysis[i][1], analysis[i][2]))
+            f.write("%d %d %d %d %d"%(elem_num[i], elem_num[i+1]-1, layers[i].anisotropy, layers[i].nonlinear, layers[i].tension))
             f.write("\n")
-            for j in range(len(E[i])):
-                f.write("%f"%(E[i][j]))
+            for j in range(len(layers[i].layer_param)):
+                f.write("%f"%(layers[i].layer_param[j]))
                 f.write("%s"%" ")
             f.write("\n")
-        '''
+            if layers[i].nonlinear > 0:
+                f.write("%d\n"%(layers[i].model_num))
+                for j in range(len(layers[i].model_param)):
+                    f.write("%.4f "%(layers[i].model_param[j]))
+                f.write("\n")
+        if ITER_FLAG:
+            for i in range(len(iter_para)):
+                f.write("%.4f "%(iter_para[i]))
+            f.write("\n")
+
         # Output model information
-        f.write("%d\r\n"%(model_num))
-        for i in range(len(model_para)):
-            f.write("%.4f "%(model_para[i]))
-        f.write("\r\n")
-        for i in range(len(iter_para)):
-            f.write("%.4f "%(iter_para[i]))
-        f.write("\r\n")
-        '''
+
         # Output y-direction edge load
         for i in y_force_edge:
             f.write("%d %d\n"%(i,2))
@@ -445,38 +461,11 @@ class MeshGenerator2d:
         for i in range(num_node):
             f.write("%.4f %.4f\n" %(node[i][0], node[i][1]))
 
-        # # Output layer information
-        # for i in range(num_layer):
-        #     f.write("%d %d %d %d %d"%(elem_num[i], elem_num[i+1]-1, analysis[i][0], analysis[i][1], analysis[i][2]))
-        #     f.write("\r\n")
-        #     for j in range(len(E[i])):
-        #         f.write("%f"%(E[i][j]))
-        #         f.write("%s"%" ")
-        #     f.write("\r\n")
-
-        # # Output model information
-        # f.write("%d\r\n"%(model_num))
-        # for i in range(len(model_para)):
-        #     f.write("%.4f "%(model_para[i]))
-        # f.write("\r\n")
-        # for i in range(len(iter_para)):
-        #     f.write("%.4f "%(iter_para[i]))
-        # f.write("\r\n")
 
         # Output element information
         for i in range(num_elem):
             f.write("%d %d %d %d %d %d %d %d %d\n" %\
                 (8,elem[i][0],elem[i][1],elem[i][2],elem[i][3],elem[i][4],elem[i][5],elem[i][6],elem[i][7]))
-
-        # # Output y-direction edge load
-        # for i in y_force_edge:
-        #     f.write("%d %d\r\n"%(i,2))
-        #     f.write("%.4f %.4f\r\n"%(0,y_force_edge[i]))
-
-        # # Output x-direction edge load
-        # for i in x_force_edge:
-        #     f.write("%d %d\r\n"%(i,1))
-        #     f.write("%.4f %.4f\r\n"%(x_force_edge[i],0))
 
         # Output x-direction prescribed disp.
         for i in pre_xdisp:
@@ -498,16 +487,3 @@ class MeshGenerator2d:
         f.close()
         # ==================================Do Not Modified This Part !===========================#
         return layer_depths
-
-# meshgenerator = Mesh_generator()
-# database = Database(vehicle_type = 'EC-135A')
-# dic_vehicle = database.query()
-# output_field = database.output_field
-#
-# num_input = len(dic_vehicle[output_field[0]])
-# print("Total number of input files:", num_input)
-#
-# for i in range(num_input):
-#     force = dic_vehicle['pressure'][i]
-#     area = dic_vehicle['contactarea'][i]
-#     meshgenerator.generate_mesh(force, area, i)

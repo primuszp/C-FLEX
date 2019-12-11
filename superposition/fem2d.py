@@ -63,7 +63,6 @@ class Superposition():
 
         self.queryMesh = None
         self.queryPoints = None
-        self.depths = None
 
         self.inputFileList = None
         self.outputFileList = None
@@ -79,17 +78,17 @@ class Superposition():
         # 1. Parse vehicle information
         self.vehicle_info(vehicle, num_tires)
 
-        # 2. Generate FEM2D meshes and superposition mesh
+        # 2. Generate FEM2D meshes and superposition mesh (if cfg.SUPERPOSITION_MESH = True)
         self.mesh_generation()
 
         # 3. Run FEM
         self.rum_fem2d()
 
         # 4. Superpose
-        #self.superpose()
+        self.superpose()
 
         # 5. Output
-        #self.output()
+        self.output()
 
     def vehicle_info(self, vehicle, num_tires):
         """Collect useful vehicle info.
@@ -97,60 +96,68 @@ class Superposition():
             vehicle [str/int]: vehicle name or ID.
             num_tires [int]: No. of tires to be analyzed (-1 for full gear analysis).
         """
-        # 0. Get vehicle name
-        self.vehicle_name = vehicle if isinstance(vehicle, str) else self.database.vehicle_all()[vehicle-1]
-
-        # 1. Get vehicle's tire configuration and evaluation points
-        tires = self.database.query(fields=cfg.VEHICLE_FIELDS, vehicle=self.vehicle_name)
-
-        evals = self.database.query_evaluation(vehicle=self.vehicle_name)
-
-        print("> === Analyzing {} of {} tires of vechicle {} at {} evaluation points ===".format(num_tires, len(tires), self.vehicle_name, len(evals)))
-
-        # 1.1. get full gear configuration by fields
-        xy = np.zeros((len(tires), 2))
-        force, area = np.zeros(len(tires)), np.zeros(len(tires))
-        for i, tire in enumerate(tires):
-            _, X, Y, F, A = [tire[f] for f in cfg.VEHICLE_FIELDS]
-            xy[i] = [X, Y]
-            force[i], area[i] = F, A
-        radius = np.sqrt(area / np.pi)
-
-        # 1.2. truncate to a subset of tires when num_tires != -1
-        if num_tires != -1:
-            #xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
-            xy, force, area, radius = xy[4:5,:], force[4:5], area[4:5], radius[4:5]
-            # force[0], area[0], radius[0] = 80, 113.097, 6 # Kim single-tire case
-            force[0], area[0], radius[0] = 80, 113.097, 6 # Issam case
-            num_tires = 1
+        if cfg.MANUAL:
+            print("> === Analyze manual input ===")
+            self.tireCoordinates = cfg.MANUAL_TIRE_COORDS
+            self.tireForces = cfg.MANUAL_TIRE_FORCES
+            self.tireAreas = cfg.MANUAL_TIRE_AREAS
+            self.tireRadii = cfg.MANUAL_TIRE_RADII
+            self.evalPoints = cfg.MANUAL_EVAL_POINTS
         else:
-            num_tires = len(tires) # update num_tires
+            # 0. Get vehicle name
+            self.vehicle_name = vehicle if isinstance(vehicle, str) else self.database.vehicle_all()[vehicle-1]
 
-        # 1.3. get evaluation points
-        pts = np.zeros((len(evals), 2))
-        for i, r in enumerate(evals):
-            pts[i] = [r['xCoordinate'], r['yCoordinate']]
+            # 1. Get vehicle's tire configuration and evaluation points
+            tires = self.database.query(fields=cfg.VEHICLE_FIELDS, vehicle=self.vehicle_name)
 
-        self.tireCoordinates = xy
-        self.tireForces = force
-        self.tireAreas = area
-        self.tireRadii = radius
-        self.evalPoints = pts
+            evals = self.database.query_evaluation(vehicle=self.vehicle_name)
 
-        # 2. print
-        print("> Tire Configuration:")
-        print("{:8} {:8} {:8} {:8} {:8} {:8}".format("Tire", "X", "Y", "P(psi)", "A(in^2)", "R(in.)"))
-        for i in range(num_tires):
-            print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, xy[i,0], xy[i,1], force[i], area[i], radius[i]))
-        # print eval points
-        print("> Evaluation Points:")
-        print("{:8} {:8} {:8} {:8}".format("Point", "X", "Y", "Z"))
-        for i, r in enumerate(evals):
-            print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, r['xCoordinate'], r['yCoordinate'], r['zCoordinate']))
+            print("> === Analyzing {} of {} tires of vechicle {} at {} evaluation points ===".format(num_tires, len(tires), self.vehicle_name, len(evals)))
 
-        # 3. plot
-        print("> [Plot] Tire configuration and evaluation points plotted in config.png")
-        plot_tire_eval(xy, radius, pts, vehicle=self.vehicle_name, path=os.path.join(cfg.PATH_2D, 'config.png'))
+            # 1.1. get full gear configuration by fields
+            xy = np.zeros((len(tires), 2))
+            force, area = np.zeros(len(tires)), np.zeros(len(tires))
+            for i, tire in enumerate(tires):
+                _, X, Y, F, A = [tire[f] for f in cfg.VEHICLE_FIELDS]
+                xy[i] = [X, Y]
+                force[i], area[i] = F, A
+            radius = np.sqrt(area / np.pi)
+
+            # 1.2. truncate to a subset of tires when num_tires != -1
+            if num_tires != -1:
+                #xy, force, area, radius = xy[:num_tires,:], force[:num_tires], area[:num_tires], radius[:num_tires]
+                xy, force, area, radius = xy[4:5,:], force[4:5], area[4:5], radius[4:5]
+                # force[0], area[0], radius[0] = 80, 113.097, 6 # Kim single-tire case
+                force[0], area[0], radius[0] = 80, 113.097, 6 # Issam case
+                num_tires = 1
+            else:
+                num_tires = len(tires) # update num_tires
+
+            # 1.3. get evaluation points
+            pts = np.zeros((len(evals), 2))
+            for i, r in enumerate(evals):
+                pts[i] = [r['xCoordinate'], r['yCoordinate']]
+
+            self.tireCoordinates = xy
+            self.tireForces = force
+            self.tireAreas = area
+            self.tireRadii = radius
+            self.evalPoints = pts
+
+            # 2. print
+            print("> Tire Configuration:")
+            print("{:8} {:8} {:8} {:8} {:8} {:8}".format("Tire", "X", "Y", "P(psi)", "A(in^2)", "R(in.)"))
+            for i in range(num_tires):
+                print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, xy[i,0], xy[i,1], force[i], area[i], radius[i]))
+            # print eval points
+            print("> Evaluation Points:")
+            print("{:8} {:8} {:8} {:8}".format("Point", "X", "Y", "Z"))
+            for i, r in enumerate(evals):
+                print("{:<8} {:<8.1f} {:<8.1f} {:<8.1f}".format(i, r['xCoordinate'], r['yCoordinate'], r['zCoordinate']))
+
+            # 3. plot
+            print("> [Plot] Tire configuration and evaluation points plotted in config.png")
+            plot_tire_eval(xy, radius, pts, vehicle=self.vehicle_name, path=os.path.join(cfg.PATH_2D, 'config.png'))
 
     def mesh_generation(self):
         """Prepare two types of mesh:
@@ -163,7 +170,6 @@ class Superposition():
 
         # 0.0. collect parameters
         layers = cfg.LAYERS
-        depth = cfg.DEPTH
         xy = self.tireCoordinates
         force = self.tireForces
         area = self.tireAreas
@@ -185,31 +191,30 @@ class Superposition():
         xmax, ymax = xy.max(axis=0)[0], xy.max(axis=0)[1]
         xlim = [xmin - xlen, xmax + xlen]
         ylim = [ymin - ylen, ymax + ylen]
-        zlim = depth
 
         # 0.2. calculate radial length needed for FEM2D mesh (based on corners points)
         corners = np.asarray([(x,y) for x in xlim for y in ylim])
         mesh_len = []
         for i in range(len(xy)):
             mesh_len.append(np.max(np.sqrt(np.sum((corners - xy[i])**2, axis=1))))
-        mesh_depth = cfg.DEPTH[0]-cfg.DEPTH[1]
+        mesh_depth = cfg.DEPTH[0]-cfg.DEPTH[1] # not used
 
         # 1. generate FEM meshes
         self._input_generator(mesh_len, mesh_depth, force, area, layers)
 
-        # 2. Generate query mesh
-        # finding: query mesh should be much denser around tire coordinate, otherwise when grid spacing is larger than the tire radius, the stress may disappear! (b.c. we never query the loading point with large displacement/stress)
-        xtire, ytire = np.unique(xy[:,0]), np.unique(xy[:,1]) # unique tire locations in X & Y directions
-        rtire = np.max(radius) * cfg.DENSE_REGION_2D # densify within range (x - 1.5R, x + 1.5R) where R is the max radius among all tires
-        self._query_mesh(xlim, ylim, zlim, xtire, ytire, rtire)
+        # 2. generate evaluations points (cross-product xy coord & depth z)
+        if len(self.evalPoints) > 0 and len(cfg.DEPTH_COORDS) > 0:
+            self.queryPoints = self._evaluation_points(self.evalPoints, cfg.DEPTH_COORDS)
 
-        # concat the evaluation points at all depths with queryPoints
-        evalPoints = np.zeros((len(self.evalPoints), len(self.depths), 3)) # P X D X 3
-        for i in range(len(self.evalPoints)):
-            t = np.tile(self.evalPoints[i], (len(self.depths), 1))
-            evalPoints[i] = np.concatenate((t, self.depths.reshape(-1,1)), axis=1)
+        if cfg.SUPERPOSITION_MESH:
+            # 3. Generate query mesh and query grid points
+            # finding: query mesh should be much denser around tire coordinate, otherwise when grid spacing is larger than the tire radius, the stress may disappear! (b.c. we never query the loading point with large displacement/stress)
+            xtire, ytire = np.unique(xy[:,0]), np.unique(xy[:,1]) # unique tire locations in X & Y directions
+            rtire = np.max(radius) * cfg.DENSE_REGION_2D # densify within range (x - 1.5R, x + 1.5R) where R is the max radius among all tires
+            gridPoints = self._query_mesh(xlim, ylim, xtire, ytire, rtire)
 
-        self.queryPoints = np.concatenate((evalPoints.reshape(-1, 3), self.queryPoints), axis=0) # N x 3
+            # concat evaluation points & mesh grid points
+            self.queryPoints = np.concatenate((self.queryPoints, gridPoints), axis=0) # N x 3
 
     def _input_generator(self, length, depth, force, area, layers):
         """Generate FEM input files in a folder for given vehicle types.
@@ -230,6 +235,20 @@ class Superposition():
             self.inputFileList.append(filename + '.txt')
             self.outputFileList.append(filename + '.vtk')
         self.layer_depths = layer_depths
+
+    def _evaluation_points(self, xy, z):
+        """Generate all evaluation points by cross-product the xy coordinates and depths.
+        Args:
+            xy [m x 2 mat]: (x,y) coordinates.
+            z [n, vec]: z coordinates (negative values).
+        Returns:
+            [m*n x 3 mat]: reshaped (x,y,z) coordinates of order (m,n,3), i.e. (x1,y1) x all_depths, (x2,y2) x all_depths, etc.
+        """
+        evalPoints = np.zeros((len(xy), len(z), 3)) # M x N x 3
+        for m in range(len(xy)):
+            t = np.tile(xy[m], (len(z), 1)) # N x 2
+            evalPoints[m] = np.concatenate((t, z.reshape(-1,1)), axis=1)
+        return evalPoints.reshape(-1,3)
 
     def _nonlinear_spacing(self, space, tire_range, spacing_dense, spacing_sparse):
         """Generate nonlinear spacing (densified around tire location) in 1D coordinates. This function will detect overlapping ranges and merge them into a larger dense region.
@@ -274,12 +293,14 @@ class Superposition():
 
         return xcoords
 
-    def _query_mesh(self, xlim, ylim, zlim, xtire, ytire, rtire):
+    def _query_mesh(self, xlim, ylim, xtire, ytire, rtire):
         """Use VTK structured grid to generate query mesh. This is also the mesh of final superposition results.
         Args:
-            *lim: [min, max] range for xyz directions
+            *lim: [min, max] range for xy directions
             *tire [n x 1 vec]: unique tire coordinates in x & y directions
             rtire [num]: tire radius to be densified
+        Return:
+            [N x 3 mat]: N grid points (x,y,z) of the query mesh.
         Note:
             query mesh will include the grid points & evaluation points at all depth
             In VTK there are 3 types of "structured" grids:
@@ -294,8 +315,7 @@ class Superposition():
         yranges = np.hstack([(ytire - rtire).reshape(-1,1), (ytire + rtire).reshape(-1,1)])
         xcoords = self._nonlinear_spacing(xlim, xranges, spacing_dense, spacing_sparse)
         ycoords = self._nonlinear_spacing(ylim, yranges, spacing_dense, spacing_sparse)
-        zcoords = - (np.logspace(np.log10(-zlim[0]+1), np.log10(-zlim[1]+1), num=cfg.DEPTH_POINTS, base=10) - 1) # logspace
-        # zcoords = np.linspace(*zlim, num=cfg.DEPTH_POINTS) # linspace
+        zcoords = cfg.DEPTH_COORDS
 
         # 2. Generate VTK rectilinear grid
         grid = vtk.vtkRectilinearGrid()
@@ -309,9 +329,8 @@ class Superposition():
         grid.GetPoints(coord)
 
         self.queryMesh = grid
-        #self.queryPoints = vtk_to_numpy(coord.GetData()) # N x 3
-        self.queryPoints = np.array([0,0,0]).reshape(-1,3) # don't query point
-        self.depths = zcoords
+
+        return vtk_to_numpy(coord.GetData()) # N x 3
 
     def rum_fem2d(self):
         """Execute FEM2D program.
@@ -400,49 +419,53 @@ class Superposition():
                 superposition[idx,:] += np.array([disp_X, disp_Y, disp_Z, stress_X, stress_Y, stress_Z])
 
         # 2. Separate evaluation point results from mesh points results
-        self.results_eval, self.results_grid = np.split(superposition, [len(self.evalPoints) * cfg.DEPTH_POINTS])
-        self.results_eval = self.results_eval.reshape(len(self.evalPoints), cfg.DEPTH_POINTS, len(cfg.FEM_FIELDS_3D)) # P x D x 6
-        print("Displacement_Z", self.results_eval[2][:,2])
+        self.results_eval, self.results_grid = np.split(superposition, [len(self.evalPoints) * len(cfg.DEPTH_COORDS)])
+        self.results_eval = self.results_eval.reshape(len(self.evalPoints), len(cfg.DEPTH_COORDS), len(cfg.FEM_FIELDS_3D)) # P x D x 6
+        for p in range(len(self.results_eval)):
+            print("Evaluation point {} ({},{}):".format(p, self.evalPoints[p,0], self.evalPoints[p,1]))
+            print(self.results_eval[p][:,2])
+        #print("Displacement_Z", self.results_eval[2][:,2])
         #print(self.results_eval[2][0][2]*25.4)
 
     def output(self):
-        """Write superposition result to vtk & save superposition results to npy for plotting.
+        """Save superposition results to npy for plotting & Write superposition result to vtk if SUPERPOSITION_MESH = True.
         """
-        print("> Writing 2D superposition results to VTK")
-
-        fields = cfg.FEM_FIELDS_3D
-        grid = self.queryMesh
-        for i, field in enumerate(fields):
-            array = numpy_to_vtk(self.results_grid[:, i], array_type=vtk.VTK_DOUBLE)
-            array.SetName(field)
-            grid.GetPointData().AddArray(array) # add field values
-
-        writer = vtk.vtkRectilinearGridWriter()
-        writer.SetInputData(grid)
-        writer.SetFileName(os.path.join(cfg.PATH_2D, 'input'+cfg.FILE_SUFFIX_2D+'_final.vtk'))
-        writer.Write()
-        """Old version
-        dataArray = []
-        for i in fields:
-            array = vtk.vtkDoubleArray()
-            array.SetName(i)
-            array.SetNumberOfTuples(grid.GetNumberOfPoints()) # axis 0
-            array.SetNumberOfComponents(1) # axis 1
-            dataArray.append(array)
-            grid.GetPointData().AddArray(array)
-
-        for i in range(results.shape[0]): # points
-            for j in range(results.shape[1]): # fields
-                dataArray[j].SetValue(i, results[i,j])
-        """
-
         if cfg.PLOT_2D:
-            plot_eval_depth(self.results_eval, self.depths, cfg.PATH_2D, cfg.FILE_SUFFIX_2D)
+            plot_eval_depth(self.results_eval, cfg.DEPTH_COORDS, cfg.PATH_2D, cfg.FILE_SUFFIX_2D)
             print("> [Plot] Response at evaluation points plotted in eval_x_2d.png")
 
         print("> Writing evaluation results to NPY")
         np.save(os.path.join(cfg.PATH_2D, 'evals'+cfg.FILE_SUFFIX_2D+'.npy'), self.results_eval)
-        np.save(os.path.join(cfg.PATH_2D, 'depths'+cfg.FILE_SUFFIX_2D+'.npy'), self.depths)
+        np.save(os.path.join(cfg.PATH_2D, 'depths'+cfg.FILE_SUFFIX_2D+'.npy'), cfg.DEPTH_COORDS)
+
+        if cfg.SUPERPOSITION_MESH:
+            print("> Writing 2D superposition results to VTK")
+
+            fields = cfg.FEM_FIELDS_3D
+            grid = self.queryMesh
+            for i, field in enumerate(fields):
+                array = numpy_to_vtk(self.results_grid[:, i], array_type=vtk.VTK_DOUBLE)
+                array.SetName(field)
+                grid.GetPointData().AddArray(array) # add field values
+
+            writer = vtk.vtkRectilinearGridWriter()
+            writer.SetInputData(grid)
+            writer.SetFileName(os.path.join(cfg.PATH_2D, 'input'+cfg.FILE_SUFFIX_2D+'_final.vtk'))
+            writer.Write()
+            """Old version
+            dataArray = []
+            for i in fields:
+                array = vtk.vtkDoubleArray()
+                array.SetName(i)
+                array.SetNumberOfTuples(grid.GetNumberOfPoints()) # axis 0
+                array.SetNumberOfComponents(1) # axis 1
+                dataArray.append(array)
+                grid.GetPointData().AddArray(array)
+
+            for i in range(results.shape[0]): # points
+                for j in range(results.shape[1]): # fields
+                    dataArray[j].SetValue(i, results[i,j])
+            """
 
 if __name__ == "__main__":
     database = Database(name=cfg.DATABASE)
